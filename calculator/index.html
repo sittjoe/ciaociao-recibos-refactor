@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Calculadora de Costos | CiaoCiao.mx – Joyería Fina</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet" />
+    <style>
+      :root{ --bg:#f8f7f3; --paper:#fffdfa; --ink:#1f2937; --muted:#6b7280; --gold-1:#bfa36f; --gold-2:#d9c08c; --gold-3:#a98e5b; --line:#e7e3d9; --error:#dc2626; --success:#16a34a; }
+      body{ margin:0; background:var(--bg); color:var(--ink); font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, sans-serif; }
+      .container{ max-width: 900px; margin: 40px auto; padding: 28px; background: linear-gradient(#fffefa,#fffdf7); border-radius: 18px; box-shadow: 0 24px 60px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.05); }
+      .title{ display:flex; align-items:center; gap:16px; }
+      .title img{ width: 160px; height:auto; }
+      h1{ font-family:"Playfair Display",serif; margin:0; background:linear-gradient(120deg,var(--gold-1),var(--gold-2) 45%,var(--gold-3)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+      .grid{ display:grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+      .card{ background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+      .card h3{ margin-top:0; font-family:"Playfair Display",serif; }
+      .row{ display:grid; grid-template-columns: 180px 1fr; align-items:center; gap: 10px; padding: 6px 0; }
+      .row label{ font-size: 12px; color: var(--muted); letter-spacing:.06em; text-transform: uppercase; }
+      input, select{ padding:10px; border:1px solid #ddd; border-radius: 10px; }
+      .actions{ display:flex; justify-content:space-between; margin-top: 16px; }
+      .btn{ padding:10px 16px; border-radius:10px; cursor:pointer; border:1px solid #d9c08c; background:linear-gradient(180deg,var(--gold-2),var(--gold-1)); color:#664f22; }
+      .btn.secondary{ background:#f7f5ee; border-color:#e6dcc6; color:#5b4a26; }
+      .btn.success{ background:#16a34a; border:none; color:#fff; }
+      .summary{ background:white; border:1px dashed #eae6dc; border-radius: 14px; padding: 14px; }
+      .summary .line{ display:flex; justify-content:space-between; padding: 4px 0; border-bottom:1px dashed #eee; }
+      .summary .line:last-child{ border-bottom:none; }
+      a.btn-back{ display:inline-block; margin-bottom:10px; text-decoration:none; padding:8px 12px; background:linear-gradient(180deg,var(--gold-2),var(--gold-1)); border:1px solid var(--gold-3); border-radius:10px; color:#664f22; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <a class="btn-back" href="../index.html">← Volver al Inicio</a>
+      <div class="title">
+        <img src="https://i.postimg.cc/FRC6PkXn/FINE-JEWELRY-85-x-54-mm-2000-x-1200-px.png" alt="CIAO CIAO MX" />
+        <h1>Calculadora de Costos de Fabricación</h1>
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <h3>Material</h3>
+          <div class="row"><label>Metal</label>
+            <select id="metal">
+              <option value="oro18">Oro 18K</option>
+              <option value="oro14">Oro 14K</option>
+              <option value="oro10">Oro 10K</option>
+              <option value="plata925">Plata .925</option>
+              <option value="platino">Platino</option>
+            </select>
+          </div>
+          <div class="row"><label>Precio/g</label><input id="precioGramo" type="number" step="0.01" value="900" /></div>
+          <div class="row"><label>Peso (g)</label><input id="peso" type="number" step="0.01" value="5" /></div>
+        </div>
+        <div class="card">
+          <h3>Trabajo y Gemas</h3>
+          <div class="row"><label>Horas mano de obra</label><input id="horas" type="number" step="0.1" value="2" /></div>
+          <div class="row"><label>$/hora</label><input id="tarifa" type="number" step="1" value="600" /></div>
+          <div class="row"><label>Gemas/insumos</label><input id="gemas" type="number" step="0.01" value="0" /></div>
+          <div class="row"><label>Margen (%)</label><input id="margen" type="number" step="1" value="30" /></div>
+          <div class="row"><label>IVA 16%</label><select id="aplicaIVA"><option value="si" selected>Sí</option><option value="no">No</option></select></div>
+        </div>
+      </div>
+
+      <div class="grid" style="margin-top: 8px;">
+        <div class="card summary">
+          <h3>Resumen</h3>
+          <div class="line"><span>Metal</span><strong id="sumMetal">$0.00</strong></div>
+          <div class="line"><span>Mano de obra</span><strong id="sumMano">$0.00</strong></div>
+          <div class="line"><span>Gemas</span><strong id="sumGemas">$0.00</strong></div>
+          <div class="line"><span>Subtotal</span><strong id="sumSubtotal">$0.00</strong></div>
+          <div class="line"><span>Margen</span><strong id="sumMargen">$0.00</strong></div>
+          <div class="line"><span>Subtotal + margen</span><strong id="sumBase">$0.00</strong></div>
+          <div class="line"><span>IVA</span><strong id="sumIva">$0.00</strong></div>
+          <div class="line"><span>Total Sugerido</span><strong id="sumTotal">$0.00</strong></div>
+        </div>
+        <div class="card">
+          <h3>Proyecto</h3>
+          <div class="row"><label>Cliente</label><input id="cliNombre" placeholder="Nombre del cliente" /></div>
+          <div class="row"><label>Teléfono</label><input id="cliTel" placeholder="+52..." /></div>
+          <div class="row"><label>Descripción</label><input id="descripcion" placeholder="Anillo, aretes, etc." /></div>
+          <div class="actions">
+            <button class="btn secondary" id="guardar">💾 Guardar proyecto</button>
+            <button class="btn" id="aCotizacion">↪ Exportar a Cotización</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="../src/calculator/calc.js"></script>
+  </body>
+  </html>
+

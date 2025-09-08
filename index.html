@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sistema de Gestión – ciaociao.mx</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="mode-selector-container">
+      <header class="selector-header">
+        <img src="https://i.postimg.cc/FRC6PkXn/FINE-JEWELRY-85-x-54-mm-2000-x-1200-px.png" alt="ciaociao.mx" class="logo-main" />
+        <h1 class="selector-title">Sistema de Gestión</h1>
+        <p class="selector-subtitle">¿Qué deseas hacer hoy?</p>
+      </header>
+
+      <div class="mode-cards">
+        <div class="mode-card" data-mode="receipt">
+          <div class="mode-icon">📄</div>
+          <h2>RECIBOS</h2>
+          <p class="mode-description">Generar recibos de venta, reparación y apartados</p>
+          <div class="mode-features">
+            <span>✓ Pagos y abonos</span>
+            <span>✓ Firma digital</span>
+            <span>✓ WhatsApp integrado</span>
+          </div>
+          <div class="mode-stats" id="receiptStats">
+            <span class="stat-item">Total: <strong>0</strong></span>
+            <span class="stat-item">Hoy: <strong>0</strong></span>
+          </div>
+          <button class="mode-button">Ir a Recibos →</button>
+        </div>
+
+        <div class="mode-card" data-mode="quotation">
+          <div class="mode-icon">💰</div>
+          <h2>COTIZACIONES</h2>
+          <p class="mode-description">Crear cotizaciones profesionales con múltiples productos</p>
+          <div class="mode-features">
+            <span>✓ Múltiples productos</span>
+            <span>✓ Descuentos automáticos</span>
+            <span>✓ Convertir a recibo</span>
+          </div>
+          <div class="mode-stats" id="quotationStats">
+            <span class="stat-item">Total: <strong>0</strong></span>
+            <span class="stat-item">Pendientes: <strong>0</strong></span>
+          </div>
+          <button class="mode-button">Ir a Cotizaciones →</button>
+        </div>
+
+        <div class="mode-card" data-mode="calculator">
+          <div class="mode-icon">🔧</div>
+          <h2>CALCULADORA</h2>
+          <p class="mode-description">Calcular costos de fabricación con precios actuales</p>
+          <div class="mode-features">
+            <span>✓ Metales y piedras</span>
+            <span>✓ Precios en tiempo real</span>
+            <span>✓ Exportar a cotización</span>
+          </div>
+          <div class="mode-stats" id="calculatorStats">
+            <span class="stat-item">Proyectos: <strong>0</strong></span>
+            <span class="stat-item">Guardados: <strong>0</strong></span>
+          </div>
+          <button class="mode-button">Ir a Calculadora →</button>
+        </div>
+      </div>
+
+      <div class="selector-footer">
+        <button id="logoutBtnSelector" class="btn-logout-selector">🔒 Cerrar Sesión</button>
+        <p class="footer-info">© 2025 ciaociao.mx - Sistema de Gestión</p>
+      </div>
+    </div>
+
+    <script type="module" src="./src/home/main.js"></script>
+  </body>
+  </html>
