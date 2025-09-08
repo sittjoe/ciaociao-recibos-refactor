@@ -491,11 +491,13 @@ function updateQR(){
   const payload = JSON.stringify({ t:'Q', n: $('#quoteNumber').textContent.trim(), c: $('#clientName').textContent.trim(), d: $('#issueDate').textContent.trim(), tot: $('#total').textContent.trim(), id: getCurrentQuoteId() || '' });
   const p = b64url(payload);
   sha256Hex(p + '.' + getSecret()).then(h => {
-    const parts = location.pathname.split('/'); parts.pop(); parts.pop();
-    const base = location.origin + (parts.join('/') || '');
+    const settings = JSON.parse(localStorage.getItem('app_settings')||'{}');
+    let base = settings.verifyBase || '';
+    if (!base) { const parts = location.pathname.split('/'); parts.pop(); parts.pop(); base = location.origin + (parts.join('/') || ''); }
     const url = `${base}/verify/index.html?p=${p}&h=${h}`;
     box.innerHTML = '';
     try { new QRCode(box, { text: url, width: 100, height: 100, correctLevel: QRCode.CorrectLevel.M }); } catch {}
+    box.dataset.url = url;
   });
 }
 

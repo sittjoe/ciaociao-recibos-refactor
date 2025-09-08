@@ -784,8 +784,9 @@ async function updateQR(){
   const payload = JSON.stringify(getQRPayload());
   const p = base64url(payload);
   const h = await sha256Hex(p + '.' + getQRSecret());
-  const parts = location.pathname.split('/'); parts.pop(); parts.pop();
-  const base = location.origin + (parts.join('/') || '');
+  const settings = JSON.parse(localStorage.getItem('app_settings')||'{}');
+  let base = settings.verifyBase || '';
+  if (!base) { const parts = location.pathname.split('/'); parts.pop(); parts.pop(); base = location.origin + (parts.join('/') || ''); }
   const url = `${base}/verify/index.html?p=${p}&h=${h}`;
   box.innerHTML = '';
   try { new QRCode(box, { text: url, width: 100, height: 100, correctLevel: QRCode.CorrectLevel.M }); } catch {}
@@ -804,6 +805,7 @@ function openSettingsModal(){
       if (typeof s.validityDays !== 'undefined') document.getElementById('settingsValidityDays').value = s.validityDays;
       if (typeof s.template !== 'undefined') document.getElementById('settingsTemplate').value = s.template;
       if (typeof s.pdfFormat !== 'undefined') document.getElementById('settingsPdfFormat').value = s.pdfFormat;
+      if (typeof s.verifyBase !== 'undefined') document.getElementById('settingsVerifyBase').value = s.verifyBase;
     }
   } catch {}
   document.getElementById('settingsModal').classList.add('active');
@@ -815,7 +817,8 @@ function saveSettingsFromModal(){
     applyIVA: document.getElementById('settingsApplyIVA').value === 'true',
     validityDays: Math.max(0, parseInt(document.getElementById('settingsValidityDays').value || '30', 10)),
     template: document.getElementById('settingsTemplate').value || 'premium',
-    pdfFormat: document.getElementById('settingsPdfFormat').value || 'letter'
+    pdfFormat: document.getElementById('settingsPdfFormat').value || 'letter',
+    verifyBase: document.getElementById('settingsVerifyBase').value || ''
   };
   try { localStorage.setItem('app_settings', JSON.stringify(s)); } catch {}
   const applyEl = document.getElementById('applyIVA'); if (applyEl) applyEl.checked = s.applyIVA;
