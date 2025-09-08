@@ -94,6 +94,37 @@
       </div>
     </div>
 
+    <!-- Modal de datos (cliente y fechas) -->
+    <div id="dataModal" class="history-modal">
+      <div class="history-modal-content" style="max-width:640px;">
+        <h3>Datos de la cotización</h3>
+        <div class="grid" style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <label>Nombre
+            <input id="formClientName" type="text" placeholder="Nombre del cliente" style="width:100%; padding:10px; border:1px solid #e5e5e5; border-radius:8px;" />
+          </label>
+          <label>Teléfono
+            <input id="formClientPhone" type="tel" placeholder="+52..." style="width:100%; padding:10px; border:1px solid #e5e5e5; border-radius:8px;" />
+          </label>
+          <label>Correo
+            <input id="formClientEmail" type="email" placeholder="cliente@email.com" style="width:100%; padding:10px; border:1px solid #e5e5e5; border-radius:8px;" />
+          </label>
+          <label>Dirección
+            <input id="formClientAddress" type="text" placeholder="Dirección completa" style="width:100%; padding:10px; border:1px solid #e5e5e5; border-radius:8px;" />
+          </label>
+          <label>Fecha de emisión
+            <input id="formIssueDate" type="date" style="width:100%; padding:10px; border:1px solid #e5e5e5; border-radius:8px;" />
+          </label>
+          <label>Válido hasta
+            <input id="formValidUntil" type="date" style="width:100%; padding:10px; border:1px solid #e5e5e5; border-radius:8px;" />
+          </label>
+        </div>
+        <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px;">
+          <button class="btn" id="closeDataModal">Cancelar</button>
+          <button class="btn success" id="saveDataModal">Guardar</button>
+        </div>
+      </div>
+    </div>
+
     <div class="sheet">
       <div class="gilded-frame">
         <header class="header">
@@ -167,6 +198,7 @@
 
         <div class="actions no-print">
           <div class="actions-left">
+            <button class="btn secondary" id="edit-data">✏️ Editar datos</button>
             <button class="btn secondary" id="add-row">➕ Agregar</button>
             <button class="btn secondary" id="save-quote">💾 Guardar</button>
             <button class="btn secondary" id="new-quote">📄 Nuevo</button>
@@ -185,4 +217,3 @@
     <script type="module" src="../src/quotation/quote.js"></script>
   </body>
   </html>
-

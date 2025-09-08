@@ -212,11 +212,21 @@ async function generatePDF() {
     const wm = document.querySelector('.watermark'); if (wm) wm.style.display = 'flex';
     const { jsPDF } = window.jspdf; const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
     const imgData = canvas.toDataURL('image/png');
-    const imgWidth = 210, pageHeight = 279, imgHeight = (canvas.height * imgWidth) / canvas.width;
-    let heightLeft = imgHeight, position = 0;
-    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-    heightLeft -= pageHeight;
-    while (heightLeft >= 0) { position = heightLeft - imgHeight; pdf.addPage(); pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight); heightLeft -= pageHeight; }
+    // Ajuste a una sola página: calcular escala máxima que quepa en ancho y alto
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = 6; // mm
+    const maxW = pageWidth - margin * 2;
+    const maxH = pageHeight - margin * 2;
+    const imgW = canvas.width;
+    const imgH = canvas.height;
+    const ratio = imgW / imgH;
+    let renderW = maxW;
+    let renderH = renderW / ratio;
+    if (renderH > maxH) { renderH = maxH; renderW = renderH * ratio; }
+    const x = (pageWidth - renderW) / 2;
+    const y = (pageHeight - renderH) / 2;
+    pdf.addImage(imgData, 'PNG', x, y, renderW, renderH);
     const fileName = `Recibo_${$('#receiptNumber').textContent}_${$('#clientName').textContent.replace(/\s+/g, '_')}.pdf`;
     pdf.save(fileName);
     showNotification('PDF generado correctamente', 'success');
@@ -254,6 +264,14 @@ function bindUI() {
   $('#searchHistory').addEventListener('input', e => searchHistory(e.target.value));
   $('#generate-pdf').addEventListener('click', generatePDF);
   $('#share-whatsapp').addEventListener('click', shareWhatsApp);
+  // Datos modal
+  $('#edit-data').addEventListener('click', openDataModal);
+  $('#closeDataModal').addEventListener('click', closeDataModal);
+  $('#saveDataModal').addEventListener('click', saveDataFromModal);
+  // Item modal
+  $('#add-item-form').addEventListener('click', openItemModal);
+  $('#closeItemModal').addEventListener('click', closeItemModal);
+  $('#saveItemModal').addEventListener('click', saveItemFromModal);
 
   document.body.addEventListener('click', e => {
     const del = e.target.closest('[data-action="delete-row"]');
@@ -343,3 +361,88 @@ function prefillFromQuoteIfPresent() {
 
 // Call after init has laid out the base UI
 document.addEventListener('DOMContentLoaded', () => { setTimeout(prefillFromQuoteIfPresent, 50); });
+
+// =============
+// Datos modal
+// =============
+function openDataModal() {
+  // Prellenar con valores actuales si es posible
+  $('#formClientName').value = $('#clientName').textContent.trim();
+  $('#formClientPhone').value = $('#clientPhone').textContent.trim();
+  $('#formClientEmail').value = $('#clientEmail').textContent.trim();
+  $('#formClientAddress').value = $('#clientAddress').textContent.trim();
+  // Convertir fechas mostradas a YYYY-MM-DD si posible (heurística muy simple)
+  const parseShown = (txt) => {
+    // Intenta Date.parse directo o deja vacío
+    const d = new Date(txt);
+    if (!isNaN(d)) return d.toISOString().slice(0,10);
+    return '';
+  };
+  $('#formIssueDate').value = parseShown($('#issueDate').textContent);
+  $('#formDeliveryDate').value = parseShown($('#deliveryDate').textContent);
+  $('#formValidUntil').value = parseShown($('#validUntil').textContent);
+  $('#dataModal').classList.add('active');
+}
+function closeDataModal() { $('#dataModal').classList.remove('active'); }
+function saveDataFromModal() {
+  const name = $('#formClientName').value.trim();
+  const phone = $('#formClientPhone').value.trim();
+  const email = $('#formClientEmail').value.trim();
+  const address = $('#formClientAddress').value.trim();
+  const issue = $('#formIssueDate').value;
+  const delivery = $('#formDeliveryDate').value;
+  const validUntil = $('#formValidUntil').value;
+  if (!name) { showNotification('El nombre del cliente es requerido','error'); return; }
+  if (phone && phone.replace(/\D/g,'').length < 8) { showNotification('Teléfono inválido','error'); return; }
+  if (email && !/^\S+@\S+\.\S+$/.test(email)) { showNotification('Correo inválido','error'); return; }
+  $('#clientName').textContent = name;
+  $('#clientPhone').textContent = phone || $('#clientPhone').textContent;
+  $('#clientEmail').textContent = email || $('#clientEmail').textContent;
+  $('#clientAddress').textContent = address || $('#clientAddress').textContent;
+  const fmt = (s)=> s? formatDate(new Date(s)) : '';
+  if (issue) $('#issueDate').textContent = fmt(issue);
+  if (delivery) $('#deliveryDate').textContent = fmt(delivery);
+  if (validUntil) $('#validUntil').textContent = fmt(validUntil);
+  closeDataModal();
+  saveReceiptAction();
+}
+
+// =============
+// Item modal
+// =============
+function openItemModal(){
+  $('#formItemDesc').value = '';
+  $('#formItemSku').value = '';
+  $('#formItemQty').value = '1';
+  $('#formItemPrice').value = '0.00';
+  $('#formItemType').value = 'producto';
+  $('#itemModal').classList.add('active');
+}
+function closeItemModal(){ $('#itemModal').classList.remove('active'); }
+function saveItemFromModal(){
+  const desc = $('#formItemDesc').value.trim();
+  const sku = $('#formItemSku').value.trim();
+  const qty = Math.max(1, parseInt($('#formItemQty').value || '1', 10));
+  const price = Math.max(0, parseFloat($('#formItemPrice').value || '0'));
+  const type = $('#formItemType').value;
+  if (!desc) { showNotification('La descripción es requerida','error'); return; }
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td class="editable" contenteditable>${desc}</td>
+    <td class="center editable qty" contenteditable>${qty}</td>
+    <td class="right editable price" contenteditable>${price.toFixed(2)}</td>
+    <td class="right subtotal">0.00</td>
+    <td class="center editable" contenteditable>${sku}</td>
+    <td class="center">
+      <select class="transaction-type-select item-type" style="font-size:11px; padding:4px;">
+        <option value="producto" ${type==='producto'?'selected':''}>Producto</option>
+        <option value="servicio" ${type==='servicio'?'selected':''}>Servicio</option>
+        <option value="reparacion" ${type==='reparacion'?'selected':''}>Reparación</option>
+      </select>
+    </td>
+    <td style="position:relative;"><span class="delete-row" data-action="delete-row">×</span></td>`;
+  $('#itemsBody').appendChild(tr);
+  recalc();
+  closeItemModal();
+  showNotification('Producto agregado','success');
+}

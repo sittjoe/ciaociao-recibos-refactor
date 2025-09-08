@@ -141,11 +141,16 @@ async function generatePDF() {
     const canvas = await html2canvas(element, { scale: 2, logging: false, useCORS: true, backgroundColor: '#ffffff', windowWidth: 900, windowHeight: element.scrollHeight });
     const { jsPDF } = window.jspdf; const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
     const imgData = canvas.toDataURL('image/png');
-    const imgWidth = 210, pageHeight = 279, imgHeight = (canvas.height * imgWidth) / canvas.width;
-    let heightLeft = imgHeight, position = 0;
-    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-    heightLeft -= pageHeight;
-    while (heightLeft >= 0) { position = heightLeft - imgHeight; pdf.addPage(); pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight); heightLeft -= pageHeight; }
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = 6;
+    const maxW = pageWidth - margin * 2;
+    const maxH = pageHeight - margin * 2;
+    const imgW = canvas.width; const imgH = canvas.height; const ratio = imgW / imgH;
+    let renderW = maxW; let renderH = renderW / ratio;
+    if (renderH > maxH) { renderH = maxH; renderW = renderH * ratio; }
+    const x = (pageWidth - renderW) / 2; const y = (pageHeight - renderH) / 2;
+    pdf.addImage(imgData, 'PNG', x, y, renderW, renderH);
     const fileName = `Cotizacion_${$('#quoteNumber').textContent}_${$('#clientName').textContent.replace(/\s+/g,'_')}.pdf`;
     pdf.save(fileName);
     showNotification('PDF generado correctamente','success');
@@ -190,6 +195,10 @@ function bindUI() {
   $('#generate-pdf').addEventListener('click', generatePDF);
   $('#share-whatsapp').addEventListener('click', shareWhatsApp);
   $('#convert-to-receipt').addEventListener('click', convertToReceipt);
+  // Datos modal
+  $('#edit-data').addEventListener('click', openDataModal);
+  $('#closeDataModal').addEventListener('click', closeDataModal);
+  $('#saveDataModal').addEventListener('click', saveDataFromModal);
 
   document.body.addEventListener('click', e => {
     const del = e.target.closest('[data-action="delete-row"]');
@@ -252,3 +261,37 @@ function init() {
 
 document.addEventListener('DOMContentLoaded', () => { bindUI(); init(); });
 
+// =============
+// Datos modal (Cotización)
+// =============
+function openDataModal() {
+  $('#formClientName').value = $('#clientName').textContent.trim();
+  $('#formClientPhone').value = $('#clientPhone').textContent.trim();
+  $('#formClientEmail').value = $('#clientEmail').textContent.trim();
+  $('#formClientAddress').value = $('#clientAddress').textContent.trim();
+  const parseShown = (t)=>{ const d=new Date(t); return isNaN(d)?'':d.toISOString().slice(0,10); };
+  $('#formIssueDate').value = parseShown($('#issueDate').textContent);
+  $('#formValidUntil').value = parseShown($('#validUntil').textContent);
+  $('#dataModal').classList.add('active');
+}
+function closeDataModal(){ $('#dataModal').classList.remove('active'); }
+function saveDataFromModal(){
+  const name = $('#formClientName').value.trim();
+  const phone = $('#formClientPhone').value.trim();
+  const email = $('#formClientEmail').value.trim();
+  const address = $('#formClientAddress').value.trim();
+  const issue = $('#formIssueDate').value;
+  const validUntil = $('#formValidUntil').value;
+  if (!name) { showNotification('El nombre del cliente es requerido','error'); return; }
+  if (phone && phone.replace(/\D/g,'').length < 8) { showNotification('Teléfono inválido','error'); return; }
+  if (email && !/^\S+@\S+\.\S+$/.test(email)) { showNotification('Correo inválido','error'); return; }
+  $('#clientName').textContent = name;
+  $('#clientPhone').textContent = phone || $('#clientPhone').textContent;
+  $('#clientEmail').textContent = email || $('#clientEmail').textContent;
+  $('#clientAddress').textContent = address || $('#clientAddress').textContent;
+  const fmt = (s)=> s? formatDate(new Date(s)) : '';
+  if (issue) $('#issueDate').textContent = fmt(issue);
+  if (validUntil) $('#validUntil').textContent = fmt(validUntil);
+  closeDataModal();
+  saveQuoteAction();
+}
