@@ -1,6 +1,7 @@
 import { parseMoney, formatNumber, formatMoney, normalizeCurrencyText, normalizeIntegerText } from '../receipt/money.js';
 import { generateQuoteNumber, getCurrentQuoteId, setCurrentQuoteId } from './state.js';
 import { saveQuote, loadQuote, openHistory, closeHistory, searchHistory } from './history.js';
+import { searchTemplates } from '../common/templates.js';
 
 const $ = (s, c = document) => c.querySelector(s);
 const $$ = (s, c = document) => Array.from(c.querySelectorAll(s));
@@ -206,6 +207,12 @@ function bindUI() {
   const pngBtn = document.getElementById('generate-png');
   if (pngBtn) pngBtn.addEventListener('click', generatePNG);
   $('#convert-to-receipt').addEventListener('click', convertToReceipt);
+  const openTplBtn = document.getElementById('open-templates');
+  if (openTplBtn) openTplBtn.addEventListener('click', openTemplatesModal);
+  const closeTplBtn = document.getElementById('closeTemplatesModal');
+  if (closeTplBtn) closeTplBtn.addEventListener('click', closeTemplatesModal);
+  const tplSearch = document.getElementById('templatesSearch');
+  if (tplSearch) tplSearch.addEventListener('input', e => renderTemplatesTable(e.target.value));
   // Datos modal
   $('#edit-data').addEventListener('click', openDataModal);
   $('#closeDataModal').addEventListener('click', closeDataModal);
@@ -242,6 +249,26 @@ function bindUI() {
     if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); saveQuoteAction(); }
     if ((e.ctrlKey || e.metaKey) && e.key === 'n') { e.preventDefault(); newQuote(); }
     if ((e.ctrlKey || e.metaKey) && e.key === 'p') { e.preventDefault(); generatePDF(); }
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'Backspace' || e.key === 'Delete')) {
+      const tr = e.target.closest ? e.target.closest('tr') : null;
+      const tbody = tr?.parentElement;
+      if (tr && tbody && tbody.children.length > 1) { e.preventDefault(); tr.remove(); recalc(); showNotification('Producto eliminado','success'); }
+    }
+    if (e.key === 'Enter' && e.target.matches && e.target.matches('[contenteditable]')) {
+      e.preventDefault();
+      const editables = $$('[contenteditable]');
+      const idx = editables.indexOf(e.target);
+      if (idx >= 0 && idx < editables.length - 1) editables[idx + 1].focus(); else { addRow(); }
+    }
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      const editables = $$('[contenteditable]');
+      const idx = editables.indexOf(document.activeElement);
+      if (idx >= 0) {
+        e.preventDefault();
+        const next = e.key === 'ArrowDown' ? Math.min(idx + 1, editables.length - 1) : Math.max(idx - 1, 0);
+        editables[next].focus();
+      }
+    }
     if (e.key === 'Escape') closeHistory();
   });
 }
@@ -397,6 +424,43 @@ function clearAllErrors(scope){
   if (!root) return;
   root.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
   root.querySelectorAll('.error-message').forEach(el => el.textContent = '');
+}
+
+// Plantillas de ítems
+function openTemplatesModal(){ renderTemplatesTable(''); document.getElementById('templatesModal').classList.add('active'); }
+function closeTemplatesModal(){ document.getElementById('templatesModal').classList.remove('active'); }
+function renderTemplatesTable(query){
+  const rows = searchTemplates(query);
+  const tbody = document.getElementById('templatesTableBody');
+  tbody.innerHTML = '';
+  rows.forEach(t => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${t.description}</td><td>${t.sku||''}</td><td>${t.type||''}</td><td class=\"right\">$${formatNumber(t.price||0)}</td><td class=\"center\"><button class=\"btn\" data-addtpl='${encodeURIComponent(JSON.stringify(t))}'>Agregar</button></td>`;
+    tbody.appendChild(tr);
+  });
+  tbody.onclick = (e)=>{
+    const btn = e.target.closest('button[data-addtpl]'); if (!btn) return;
+    const t = JSON.parse(decodeURIComponent(btn.getAttribute('data-addtpl')));
+    addRowFromTemplate(t);
+  };
+}
+function addRowFromTemplate(t){
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td class=\"editable\" contenteditable>${t.description}</td>
+    <td class=\"center editable qty\" contenteditable>1</td>
+    <td class=\"right editable price\" contenteditable>${(t.price||0).toFixed(2)}</td>
+    <td class=\"right subtotal\">0.00</td>
+    <td class=\"center editable\" contenteditable>${t.sku||''}</td>
+    <td class=\"center\" style=\"position:relative; white-space:nowrap;\">
+      <button class=\"delete-row\" title=\"Eliminar\" data-action=\"delete-row\">×</button>
+      <button class=\"btn\" style=\"padding:4px 6px; font-size:12px;\" title=\"Duplicar\" data-action=\"row-dup\">⎘</button>
+      <button class=\"btn\" style=\"padding:4px 6px; font-size:12px;\" title=\"Subir\" data-action=\"row-up\">↑</button>
+      <button class=\"btn\" style=\"padding:4px 6px; font-size:12px;\" title=\"Bajar\" data-action=\"row-down\">↓</button>
+    </td>`;
+  $('#itemsBody').appendChild(tr);
+  recalc();
+  closeTemplatesModal();
 }
 
 // QR code for quotes

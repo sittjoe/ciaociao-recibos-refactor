@@ -223,6 +223,7 @@
             <button class="btn secondary" id="edit-data">✏️ Editar datos</button>
             <button class="btn secondary" id="pick-client">👤 Seleccionar cliente</button>
             <button class="btn secondary" id="add-row">➕ Agregar</button>
+            <button class="btn secondary" id="open-templates">🧩 Plantillas</button>
             <button class="btn secondary" id="save-quote">💾 Guardar</button>
             <button class="btn secondary" id="new-quote">📄 Nuevo</button>
             <button class="btn secondary" id="show-history">📚 Historial</button>
@@ -235,6 +236,21 @@
           </div>
         </div>
 
+      </div>
+    </div>
+
+    <!-- Modal de plantillas de ítems -->
+    <div id="templatesModal" class="history-modal">
+      <div class="history-modal-content" style="max-width:800px;">
+        <h3>Plantillas de ítems</h3>
+        <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
+          <input id="templatesSearch" placeholder="Buscar por descripción, SKU o tipo..." style="flex:1; padding:10px; border:1px solid #e5e5e5; border-radius:8px;"/>
+        </div>
+        <table class="history-table">
+          <thead><tr><th>Descripción</th><th>SKU</th><th>Tipo</th><th class="right">Precio</th><th class="center">Acción</th></tr></thead>
+        <tbody id="templatesTableBody"></tbody>
+        </table>
+        <div style="text-align:right; margin-top:12px;"><button class="btn" id="closeTemplatesModal">Cerrar</button></div>
       </div>
     </div>
 
