@@ -148,7 +148,8 @@ async function generatePDF() {
     showNotification('Generando PDF...','info');
     saveQuoteAction();
     updateQR();
-    document.body.classList.add('exporting');
+    const endExport = await exportStart();
+    await waitFor(()=> document.getElementById('qrBox')?.children.length>0, 600);
     const element = document.querySelector('.gilded-frame');
     const canvas = await html2canvas(element, { scale: 2, logging: false, useCORS: true, backgroundColor: '#ffffff', windowWidth: 900, windowHeight: element.scrollHeight });
     const { jsPDF } = window.jspdf; const fmt = (JSON.parse(localStorage.getItem('app_settings')||'{}').pdfFormat)||'letter';
@@ -168,7 +169,7 @@ async function generatePDF() {
     pdf.save(fileName);
     showNotification('PDF generado correctamente','success');
   } catch (e) { console.error(e); showNotification('Error al generar PDF','error'); }
-  finally { document.body.classList.remove('exporting'); }
+  finally { endExport && endExport(); }
 }
 
 function shareWhatsApp() {
@@ -181,10 +182,23 @@ function shareWhatsApp() {
   msg += `\n*RESUMEN*\nSubtotal: $${q.totals.subtotal}\n`;
   if (parseMoney(q.totals.discount) > 0) msg += `Descuento: -$${q.totals.discount}\n`;
   msg += `IVA: $${q.totals.iva}\n*TOTAL: ${q.totals.total}*`;
-  const phone = (q.client.phone || '').replace(/\D/g,'');
-  const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
-  window.open(url, '_blank');
-  showNotification('Abriendo WhatsApp...','success');
+  // Añadir enlace de verificación firmado
+  (async () => {
+    try {
+      const payload = JSON.stringify({ t:'Q', n: $('#quoteNumber').textContent.trim(), c: $('#clientName').textContent.trim(), d: $('#issueDate').textContent.trim(), tot: $('#total').textContent.trim(), id: getCurrentQuoteId() || '' });
+      const p = b64url(payload);
+      const h = await sha256Hex(p + '.' + getSecret());
+      const settings = JSON.parse(localStorage.getItem('app_settings')||'{}');
+      let base = settings.verifyBase || '';
+      if (!base) { const parts = location.pathname.split('/'); parts.pop(); parts.pop(); base = location.origin + (parts.join('/') || ''); }
+      const verifyUrl = `${base}/verify/index.html?p=${p}&h=${h}`;
+      msg += `\nVerificar: ${verifyUrl}`;
+    } catch {}
+    const phone = (q.client.phone || '').replace(/\D/g,'');
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+    window.open(url, '_blank');
+    showNotification('Abriendo WhatsApp...','success');
+  })();
 }
 
 function convertToReceipt() {
@@ -331,7 +345,8 @@ document.addEventListener('DOMContentLoaded', () => { bindUI(); init(); });
 async function generatePNG(){
   try {
     showNotification('Generando PNG...','info');
-    document.body.classList.add('exporting');
+    const endExport = await exportStart();
+    await waitFor(()=> document.getElementById('qrBox')?.children.length>0, 600);
     const element = document.querySelector('.gilded-frame');
     const canvas = await html2canvas(element, { scale: 2, logging: false, useCORS: true, backgroundColor: '#ffffff', windowWidth: 900, windowHeight: element.scrollHeight });
     const dataUrl = canvas.toDataURL('image/png');
@@ -339,7 +354,7 @@ async function generatePNG(){
     document.body.appendChild(a); a.click(); a.remove();
     showNotification('PNG generado','success');
   } catch(e){ console.error(e); showNotification('Error al generar PNG','error'); }
-  finally { document.body.classList.remove('exporting'); }
+  finally { endExport && endExport(); }
 }
 
 // Clientes recientes (reutiliza recibos + cotizaciones guardadas)
@@ -504,3 +519,19 @@ function updateQR(){
 function b64url(str){ return btoa(unescape(encodeURIComponent(str))).replace(/=+$/,'').replace(/\+/g,'-').replace(/\//g,'_'); }
 async function sha256Hex(text){ const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)); return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join(''); }
 function getSecret(){ try { const s = localStorage.getItem('qr_secret'); if (s) return s; } catch{} return 'CCMX-QR-2025'; }
+
+function waitFor(cond, timeout=500){
+  const start = Date.now();
+  return new Promise((resolve)=>{
+    (function tick(){ if (cond()) return resolve(true); if (Date.now()-start>timeout) return resolve(false); requestAnimationFrame(tick); })();
+  });
+}
+
+async function exportStart(){
+  const body = document.body;
+  const wasSimple = body.classList.contains('simple');
+  body.classList.add('exporting');
+  if (wasSimple) body.classList.remove('simple');
+  await waitFor(()=>true, 50);
+  return () => { body.classList.remove('exporting'); if (wasSimple) body.classList.add('simple'); };
+}

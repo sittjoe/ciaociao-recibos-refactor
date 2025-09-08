@@ -225,8 +225,9 @@ async function generatePDF() {
     showNotification('Generando PDF...', 'info');
     saveReceiptAction();
     updateQR();
-    document.body.classList.add('exporting');
-    const restoreLogo = ensureExportLogo();
+    const endExport = await exportStart();
+    const restoreLogo = await ensureExportLogo();
+    await waitFor(() => document.getElementById('qrBox')?.children.length > 0, 600);
     $$('.delete-row, .clear-sig, .actions, .watermark, .btn-back').forEach(el => { if (el) el.style.display = 'none'; });
     const element = document.querySelector('.gilded-frame');
     const canvas = await html2canvas(element, { scale: 2, logging: false, useCORS: true, backgroundColor: '#ffffff', windowWidth: 900, windowHeight: element.scrollHeight });
@@ -256,8 +257,8 @@ async function generatePDF() {
   } catch (e) {
     console.error(e); showNotification('Error al generar PDF', 'error');
   } finally {
-    document.body.classList.remove('exporting');
-    try { const fn = ensureExportLogo; if (fn) restoreLogo && restoreLogo(); } catch {}
+    try { restoreLogo && restoreLogo(); } catch {}
+    endExport && endExport();
   }
 }
 
@@ -274,18 +275,26 @@ function shareWhatsApp() {
   msg += `IVA: $${r.totals.iva}\n*TOTAL: ${r.totals.total}*\n`;
   if (parseMoney(r.totals.advance) > 0) { msg += `\nAnticipo: $${r.totals.advance}\n*SALDO PENDIENTE: ${r.totals.balance}*\n`; }
   msg += `\n━━━━━━━━━━━━━━━━━━━━━\n*CIAO CIAO MX*\nwww.ciaociao.mx\nTel: +52 1 55 9211 2643\n_Garantía de por vida en mano de obra_`;
-  const phone = (r.client.phone || '').replace(/\D/g, '');
-  const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
-  window.open(url, '_blank');
-  showNotification('Abriendo WhatsApp...', 'success');
+  // Añadir enlace de verificación firmado
+  (async () => {
+    try {
+      const verifyUrl = await buildVerifyUrl();
+      msg += `\nVerificar: ${verifyUrl}`;
+    } catch {}
+    const phone = (r.client.phone || '').replace(/\D/g, '');
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+    window.open(url, '_blank');
+    showNotification('Abriendo WhatsApp...', 'success');
+  })();
 }
 
 async function generatePNG() {
   try {
     showNotification('Generando PNG...', 'info');
     updateQR();
-    document.body.classList.add('exporting');
-    const restoreLogo = ensureExportLogo();
+    const endExport = await exportStart();
+    const restoreLogo = await ensureExportLogo();
+    await waitFor(() => document.getElementById('qrBox')?.children.length > 0, 600);
     // Ocultar elementos no deseados
     const toHide = $$('.delete-row, .clear-sig, .actions, .btn-back, .mobile-actions, .mobile-summary, .watermark');
     const prevDisplay = new Map();
@@ -301,8 +310,8 @@ async function generatePNG() {
     showNotification('PNG generado', 'success');
   } catch (e) { console.error(e); showNotification('Error al generar PNG','error'); }
   finally {
-    document.body.classList.remove('exporting');
-    try { const fn = ensureExportLogo; if (fn) restoreLogo && restoreLogo(); } catch {}
+    try { restoreLogo && restoreLogo(); } catch {}
+    endExport && endExport();
   }
 }
 
@@ -680,13 +689,23 @@ function clearAllErrors(scope){
 }
 
 // Ensure logo is export-safe (fallback to inline SVG if remote blocks CORS)
-function ensureExportLogo(){
+async function ensureExportLogo(){
   const img = document.querySelector('.brand img');
   if (!img) return () => {};
   try { img.crossOrigin = 'anonymous'; img.setAttribute('crossorigin','anonymous'); } catch {}
   const original = img.src;
   // If image naturalWidth is 0, or cross-origin likely to fail, replace with inline SVG text
   let replaced = false;
+  // Try to wait for load first
+  try {
+    if (!img.complete || !img.naturalWidth) {
+      await Promise.race([
+        (img.decode ? img.decode() : new Promise((res)=>{ img.onload = res; })) ,
+        new Promise((_,rej)=> setTimeout(rej, 500))
+      ]);
+    }
+    if (img.naturalWidth) return () => {};
+  } catch {}
   const makeSvgData = () => {
     const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='300' height='60'>
       <rect width='100%' height='100%' fill='white'/>
@@ -707,6 +726,22 @@ function ensureExportLogo(){
     replaced = true;
   }
   return () => { if (replaced && img.dataset.exportOriginal) { img.src = img.dataset.exportOriginal; delete img.dataset.exportOriginal; } };
+}
+
+function waitFor(cond, timeout=500){
+  const start = Date.now();
+  return new Promise((resolve)=>{
+    (function tick(){ if (cond()) return resolve(true); if (Date.now()-start>timeout) return resolve(false); requestAnimationFrame(tick); })();
+  });
+}
+
+async function exportStart(){
+  const body = document.body;
+  const wasSimple = body.classList.contains('simple');
+  body.classList.add('exporting');
+  if (wasSimple) body.classList.remove('simple');
+  await waitFor(()=>true, 50);
+  return () => { body.classList.remove('exporting'); if (wasSimple) body.classList.add('simple'); };
 }
 
 // =============
