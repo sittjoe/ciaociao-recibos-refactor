@@ -683,6 +683,7 @@ function clearAllErrors(scope){
 function ensureExportLogo(){
   const img = document.querySelector('.brand img');
   if (!img) return () => {};
+  try { img.crossOrigin = 'anonymous'; img.setAttribute('crossorigin','anonymous'); } catch {}
   const original = img.src;
   // If image naturalWidth is 0, or cross-origin likely to fail, replace with inline SVG text
   let replaced = false;
