@@ -7,6 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
       :root{ --bg:#f8f7f3; --paper:#fffdfa; --ink:#1f2937; --muted:#6b7280; --gold-1:#bfa36f; --gold-2:#d9c08c; --gold-3:#a98e5b; --line:#e7e3d9; --error:#dc2626; --success:#16a34a; }
       html,body{ height:100%; }
@@ -70,6 +71,7 @@
     </style>
   </head>
   <body>
+    <script type="module" src="../src/common/security.js"></script>
     <a href="../index.html" class="btn-back">← Volver al Inicio</a>
     <div id="notification" class="notification"><span id="notification-message"></span></div>
 
@@ -131,6 +133,7 @@
 
     <div class="sheet">
       <div class="gilded-frame">
+        <div id="qrBox" style="position:absolute; right:16px; bottom:16px; width:110px; height:110px; background:#fff; border:1px solid var(--line); border-radius:8px; display:flex; align-items:center; justify-content:center;"></div>
         <header class="header">
           <div class="brand">
             <img alt="CIAO CIAO MX – Joyería Fina" src="https://i.postimg.cc/FRC6PkXn/FINE-JEWELRY-85-x-54-mm-2000-x-1200-px.png" />

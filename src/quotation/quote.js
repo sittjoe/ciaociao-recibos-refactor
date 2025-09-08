@@ -95,6 +95,7 @@ function collectQuoteData() {
 function saveQuoteAction() {
   const data = collectQuoteData();
   saveQuote(data);
+  updateQR();
   showNotification('Cotización guardada','success');
 }
 
@@ -144,6 +145,7 @@ async function generatePDF() {
   try {
     showNotification('Generando PDF...','info');
     saveQuoteAction();
+    updateQR();
     const element = document.querySelector('.gilded-frame');
     const canvas = await html2canvas(element, { scale: 2, logging: false, useCORS: true, backgroundColor: '#ffffff', windowWidth: 900, windowHeight: element.scrollHeight });
     const { jsPDF } = window.jspdf; const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
@@ -395,4 +397,19 @@ function clearAllErrors(scope){
   if (!root) return;
   root.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
   root.querySelectorAll('.error-message').forEach(el => el.textContent = '');
+}
+
+// QR code for quotes
+function getQRText(){
+  const num = $('#quoteNumber').textContent.trim();
+  const client = $('#clientName').textContent.trim();
+  const issue = $('#issueDate').textContent.trim();
+  const total = $('#total').textContent.trim();
+  return `CIAO CIAO MX\nCotización ${num}\nCliente: ${client}\nFecha: ${issue}\nTotal: ${total}\nhttps://www.ciaociao.mx`;
+}
+function updateQR(){
+  const box = document.getElementById('qrBox');
+  if (!box || typeof QRCode === 'undefined') return;
+  box.innerHTML = '';
+  try { new QRCode(box, { text: getQRText(), width: 100, height: 100, correctLevel: QRCode.CorrectLevel.M }); } catch {}
 }

@@ -130,6 +130,7 @@ function collectReceiptData() {
 function saveReceiptAction() {
   const data = collectReceiptData();
   saveReceipt(data);
+  updateQR();
   showNotification('Recibo guardado', 'success');
 }
 
@@ -214,6 +215,7 @@ async function generatePDF() {
   try {
     showNotification('Generando PDF...', 'info');
     saveReceiptAction();
+    updateQR();
     $$('.delete-row, .clear-sig, .actions, .watermark, .btn-back').forEach(el => { if (el) el.style.display = 'none'; });
     const element = document.querySelector('.gilded-frame');
     const canvas = await html2canvas(element, { scale: 2, logging: false, useCORS: true, backgroundColor: '#ffffff', windowWidth: 900, windowHeight: element.scrollHeight });
@@ -266,6 +268,7 @@ function shareWhatsApp() {
 async function generatePNG() {
   try {
     showNotification('Generando PNG...', 'info');
+    updateQR();
     const element = document.querySelector('.gilded-frame');
     const canvas = await html2canvas(element, { scale: 2, logging: false, useCORS: true, backgroundColor: '#ffffff', windowWidth: 900, windowHeight: element.scrollHeight });
     const dataUrl = canvas.toDataURL('image/png');
@@ -591,6 +594,23 @@ function clearAllErrors(scope){
   if (!root) return;
   root.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
   root.querySelectorAll('.error-message').forEach(el => el.textContent = '');
+}
+
+// =============
+// QR code
+// =============
+function getQRText(){
+  const num = $('#receiptNumber').textContent.trim();
+  const client = $('#clientName').textContent.trim();
+  const issue = $('#issueDate').textContent.trim();
+  const total = $('#total').textContent.trim();
+  return `CIAO CIAO MX\nRecibo ${num}\nCliente: ${client}\nFecha: ${issue}\nTotal: ${total}\nhttps://www.ciaociao.mx`;
+}
+function updateQR(){
+  const box = document.getElementById('qrBox');
+  if (!box || typeof QRCode === 'undefined') return;
+  box.innerHTML = '';
+  try { new QRCode(box, { text: getQRText(), width: 100, height: 100, correctLevel: QRCode.CorrectLevel.M }); } catch {}
 }
 
 // =============
