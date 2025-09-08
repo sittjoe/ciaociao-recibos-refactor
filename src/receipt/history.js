@@ -77,10 +77,17 @@ export function renderHistoryTable(onLoad) {
 export function searchHistory(query) {
   const q = String(query || '').toLowerCase();
   const tbody = document.getElementById('historyTableBody');
+  const from = document.getElementById('historyFrom')?.value;
+  const to = document.getElementById('historyTo')?.value;
   const receipts = sortByDate(listReceipts()).filter(r => {
     return (r.number || '').toLowerCase().includes(q)
       || (r.client?.name || '').toLowerCase().includes(q)
       || (r.dates?.issue || '').toLowerCase().includes(q);
+  }).filter(r => {
+    const d = new Date(r?.dates?.issue || r?.date || 0);
+    if (from && d < new Date(from)) return false;
+    if (to && d > new Date(to)) return false;
+    return true;
   });
   tbody.innerHTML = '';
   receipts.forEach(r => {
@@ -97,6 +104,26 @@ export function searchHistory(query) {
       </td>`;
     tbody.appendChild(tr);
   });
+}
+
+export function exportHistoryCSV() {
+  const q = document.getElementById('searchHistory')?.value || '';
+  const from = document.getElementById('historyFrom')?.value;
+  const to = document.getElementById('historyTo')?.value;
+  const items = sortByDate(listReceipts()).filter(r => {
+    const ok = (r.number||'').toLowerCase().includes(q.toLowerCase()) || (r.client?.name||'').toLowerCase().includes(q.toLowerCase()) || (r.dates?.issue||'').toLowerCase().includes(q.toLowerCase());
+    if (!ok) return false;
+    const d = new Date(r?.dates?.issue || r?.date || 0);
+    if (from && d < new Date(from)) return false;
+    if (to && d > new Date(to)) return false;
+    return true;
+  });
+  const rows = [ ['Folio','Fecha','Cliente','Total','Tipo'] ];
+  items.forEach(r => rows.push([r.number, r.dates?.issue||'', r.client?.name||'', r.totals?.total||'', r.transactionType||'']));
+  const csv = rows.map(r => r.map(v => '"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'recibos.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
 }
 
 export function openHistory(onLoad) {

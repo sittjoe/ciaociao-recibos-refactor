@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Recibo Premium | CiaoCiao.mx – Joyería Fina</title>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet" />
+    <link rel="manifest" href="../manifest.webmanifest" />
 
     <!-- jsPDF + html2canvas para exportar PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -124,9 +125,12 @@
     <div id="historyModal" class="history-modal">
       <div class="history-modal-content">
         <h3>Historial de Recibos</h3>
-        <div style="margin-bottom: 16px;">
+        <div style="margin-bottom: 8px; display:grid; grid-template-columns: 1fr 1fr 2fr; gap:8px;">
+          <input type="date" id="historyFrom"/>
+          <input type="date" id="historyTo"/>
           <input type="text" id="searchHistory" placeholder="Buscar por cliente, número o fecha..." style="width: 100%; padding: 10px; border: 1px solid #e5e5e5; border-radius: 8px;" />
         </div>
+        <div style="margin-bottom:8px; text-align:right;"><button class="btn" id="exportHistoryCsv">Exportar CSV</button></div>
         <table class="history-table">
         <thead>
           <tr>
@@ -447,14 +451,43 @@
           <label class="form-label">Días de validez por defecto
             <input id="settingsValidityDays" type="number" min="0" step="1" style="width:100%; padding:10px; border:1px solid #e5e5e5; border-radius:8px;" />
           </label>
+          <label class="form-label">Plantilla
+            <select id="settingsTemplate" style="width:100%; padding:10px; border:1px solid #e5e5e5; border-radius:8px;">
+              <option value="premium">Premium</option>
+              <option value="simple">Simple</option>
+            </select>
+          </label>
+          <label class="form-label">Tamaño PDF
+            <select id="settingsPdfFormat" style="width:100%; padding:10px; border:1px solid #e5e5e5; border-radius:8px;">
+              <option value="letter">Carta (Letter)</option>
+              <option value="a4">A4</option>
+            </select>
+          </label>
         </div>
-        <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px;">
-          <button class="btn" id="closeSettingsModal">Cancelar</button>
-          <button class="btn success" id="saveSettingsModal">Guardar</button>
+        <div style="display:flex; gap:8px; justify-content:space-between; align-items:center; margin-top:12px;">
+          <div>
+            <button class="btn" id="exportData">Exportar datos</button>
+            <label class="btn" for="importDataInput" style="cursor:pointer;">Importar datos</label>
+            <input id="importDataInput" type="file" accept="application/json" style="display:none;" />
+          </div>
+          <div>
+            <button class="btn" id="closeSettingsModal">Cancelar</button>
+            <button class="btn success" id="saveSettingsModal">Guardar</button>
+          </div>
         </div>
       </div>
     </div>
 
     <script type="module" src="../src/receipt/receipt.js"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('../sw.js').catch(()=>{});
+      }
+    </script>
   </body>
   </html>
+      /* Template simple */
+      body.simple .gilded-frame{ background: var(--paper); border:1px solid var(--line); }
+      body.simple .doc-title h1{ background: none; color: var(--ink); }
+      body.simple .items thead th{ background: #fafafa; }
+      body.simple .sum-card .row.total{ background:#fafafa; }

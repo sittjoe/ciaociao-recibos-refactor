@@ -49,6 +49,10 @@
       <button id="backBtn">Volver</button>
     </div>
     <script type="module" src="../src/ticket/ticket.js"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('../sw.js').catch(()=>{});
+      }
+    </script>
   </body>
   </html>
-

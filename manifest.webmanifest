@@ -1,0 +1,13 @@
+{
+  "name": "CIAO CIAO MX – Sistema",
+  "short_name": "CIAO CIAO",
+  "start_url": "/ciaociao-recibos-refactor/index.html",
+  "scope": "/ciaociao-recibos-refactor/",
+  "display": "standalone",
+  "background_color": "#0b0d12",
+  "theme_color": "#0b0d12",
+  "icons": [
+    { "src": "https://i.postimg.cc/FRC6PkXn/FINE-JEWELRY-85-x-54-mm-2000-x-1200-px.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
+

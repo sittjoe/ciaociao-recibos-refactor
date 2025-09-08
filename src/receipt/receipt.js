@@ -230,7 +230,8 @@ async function generatePDF() {
     const canvas = await html2canvas(element, { scale: 2, logging: false, useCORS: true, backgroundColor: '#ffffff', windowWidth: 900, windowHeight: element.scrollHeight });
     $$('.delete-row, .clear-sig, .actions, .btn-back').forEach(el => { if (el) el.style.display = ''; });
     const wm = document.querySelector('.watermark'); if (wm) wm.style.display = 'flex';
-    const { jsPDF } = window.jspdf; const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
+    const { jsPDF } = window.jspdf; const fmt = (JSON.parse(localStorage.getItem('app_settings')||'{}').pdfFormat)||'letter';
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: fmt });
     const imgData = canvas.toDataURL('image/png');
     // Ajuste a una sola página: calcular escala máxima que quepa en ancho y alto
     const pageWidth = pdf.internal.pageSize.getWidth();
@@ -302,6 +303,12 @@ function bindUI() {
   $('#show-history').addEventListener('click', () => openHistory(loadReceiptAction));
   $('#closeHistoryModal').addEventListener('click', () => closeHistory());
   $('#searchHistory').addEventListener('input', e => searchHistory(e.target.value));
+  const hFrom = document.getElementById('historyFrom');
+  const hTo = document.getElementById('historyTo');
+  const expCsv = document.getElementById('exportHistoryCsv');
+  if (hFrom) hFrom.addEventListener('change', () => searchHistory(document.getElementById('searchHistory').value));
+  if (hTo) hTo.addEventListener('change', () => searchHistory(document.getElementById('searchHistory').value));
+  if (expCsv) expCsv.addEventListener('click', () => import('./history.js').then(m => m.exportHistoryCSV()));
   $('#generate-pdf').addEventListener('click', generatePDF);
   $('#share-whatsapp').addEventListener('click', shareWhatsApp);
   const pngBtn = document.getElementById('generate-png');
@@ -327,6 +334,9 @@ function bindUI() {
     document.getElementById('ma-png').addEventListener('click', generatePNG);
     document.getElementById('ma-wa').addEventListener('click', shareWhatsApp);
   }
+  // QR clickable
+  const qr = document.getElementById('qrBox');
+  if (qr) qr.addEventListener('click', ()=>{ if (qr.dataset.url) window.open(qr.dataset.url, '_blank'); });
   // Datos modal
   $('#edit-data').addEventListener('click', openDataModal);
   $('#closeDataModal').addEventListener('click', closeDataModal);
@@ -465,6 +475,7 @@ function init() {
         const now = new Date(); const v = new Date(now); v.setDate(v.getDate() + s.validityDays);
         $('#validUntil').textContent = formatDate(v);
       }
+      if (s.template === 'simple') document.body.classList.add('simple');
     }
   } catch {}
   const number = generateReceiptNumber();
@@ -737,6 +748,7 @@ async function updateQR(){
   const url = `${base}/verify/index.html?p=${p}&h=${h}`;
   box.innerHTML = '';
   try { new QRCode(box, { text: url, width: 100, height: 100, correctLevel: QRCode.CorrectLevel.M }); } catch {}
+  box.dataset.url = url;
 }
 
 // =============
@@ -749,6 +761,8 @@ function openSettingsModal(){
       if (typeof s.ivaRate !== 'undefined') document.getElementById('settingsIvaRate').value = s.ivaRate;
       if (typeof s.applyIVA !== 'undefined') document.getElementById('settingsApplyIVA').value = String(!!s.applyIVA);
       if (typeof s.validityDays !== 'undefined') document.getElementById('settingsValidityDays').value = s.validityDays;
+      if (typeof s.template !== 'undefined') document.getElementById('settingsTemplate').value = s.template;
+      if (typeof s.pdfFormat !== 'undefined') document.getElementById('settingsPdfFormat').value = s.pdfFormat;
     }
   } catch {}
   document.getElementById('settingsModal').classList.add('active');
@@ -758,14 +772,48 @@ function saveSettingsFromModal(){
   const s = {
     ivaRate: parseFloat(document.getElementById('settingsIvaRate').value || '16') || 16,
     applyIVA: document.getElementById('settingsApplyIVA').value === 'true',
-    validityDays: Math.max(0, parseInt(document.getElementById('settingsValidityDays').value || '30', 10))
+    validityDays: Math.max(0, parseInt(document.getElementById('settingsValidityDays').value || '30', 10)),
+    template: document.getElementById('settingsTemplate').value || 'premium',
+    pdfFormat: document.getElementById('settingsPdfFormat').value || 'letter'
   };
   try { localStorage.setItem('app_settings', JSON.stringify(s)); } catch {}
   const applyEl = document.getElementById('applyIVA'); if (applyEl) applyEl.checked = s.applyIVA;
   const rateEl = document.getElementById('ivaRate'); if (rateEl) rateEl.value = s.ivaRate;
+  if (s.template === 'simple') document.body.classList.add('simple'); else document.body.classList.remove('simple');
   recalc();
   closeSettingsModal();
 }
+
+// Export/Import data
+document.addEventListener('DOMContentLoaded', () => {
+  const expBtn = document.getElementById('exportData');
+  const impInput = document.getElementById('importDataInput');
+  if (expBtn) expBtn.addEventListener('click', () => {
+    try {
+      const data = {
+        receipts: JSON.parse(localStorage.getItem('premium_receipts_ciaociao')||'[]'),
+        quotes: JSON.parse(localStorage.getItem('quotations_ciaociao')||'[]'),
+        templates: JSON.parse(localStorage.getItem('item_templates')||'[]'),
+        settings: JSON.parse(localStorage.getItem('app_settings')||'{}')
+      };
+      const blob = new Blob([JSON.stringify(data,null,2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'ciaociao-backup.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    } catch {}
+  });
+  if (impInput) impInput.addEventListener('change', async (e) => {
+    const file = e.target.files && e.target.files[0]; if (!file) return;
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      if (data.receipts) localStorage.setItem('premium_receipts_ciaociao', JSON.stringify(data.receipts));
+      if (data.quotes) localStorage.setItem('quotations_ciaociao', JSON.stringify(data.quotes));
+      if (data.templates) localStorage.setItem('item_templates', JSON.stringify(data.templates));
+      if (data.settings) localStorage.setItem('app_settings', JSON.stringify(data.settings));
+      showNotification('Datos importados', 'success');
+    } catch { showNotification('Archivo inválido','error'); }
+  });
+});
 
 // =============
 // Clientes recientes

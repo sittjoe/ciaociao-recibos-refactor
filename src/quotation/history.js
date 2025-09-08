@@ -73,9 +73,16 @@ export function renderHistoryTable(onLoad) {
 export function searchHistory(query) {
   const q = String(query || '').toLowerCase();
   const tbody = document.getElementById('historyTableBody');
+  const from = document.getElementById('historyFrom')?.value;
+  const to = document.getElementById('historyTo')?.value;
   const filtered = sortByDate(listQuotes()).filter(x => (x.number || '').toLowerCase().includes(q)
     || (x.client?.name || '').toLowerCase().includes(q)
-    || (x.dates?.issue || '').toLowerCase().includes(q));
+    || (x.dates?.issue || '').toLowerCase().includes(q)).filter(x => {
+      const d = new Date(x?.dates?.issue || x?.date || 0);
+      if (from && d < new Date(from)) return false;
+      if (to && d > new Date(to)) return false;
+      return true;
+    });
   tbody.innerHTML = '';
   filtered.forEach(x => {
     const tr = document.createElement('tr');
@@ -91,6 +98,26 @@ export function searchHistory(query) {
       </td>`;
     tbody.appendChild(tr);
   });
+}
+
+export function exportHistoryCSV() {
+  const q = document.getElementById('searchHistory')?.value || '';
+  const from = document.getElementById('historyFrom')?.value;
+  const to = document.getElementById('historyTo')?.value;
+  const items = sortByDate(listQuotes()).filter(x => (x.number || '').toLowerCase().includes(q.toLowerCase())
+    || (x.client?.name || '').toLowerCase().includes(q.toLowerCase())
+    || (x.dates?.issue || '').toLowerCase().includes(q.toLowerCase())).filter(x => {
+      const d = new Date(x?.dates?.issue || x?.date || 0);
+      if (from && d < new Date(from)) return false;
+      if (to && d > new Date(to)) return false;
+      return true;
+    });
+  const rows = [ ['Folio','Fecha','Cliente','Total','Estatus'] ];
+  items.forEach(r => rows.push([r.number, r.dates?.issue||'', r.client?.name||'', r.totals?.total||'', r.status||'']));
+  const csv = rows.map(r => r.map(v => '"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'cotizaciones.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
 }
 
 export function openHistory(onLoad) {

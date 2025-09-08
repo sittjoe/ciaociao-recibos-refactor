@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Sistema de Gestión – ciaociao.mx</title>
     <link rel="stylesheet" href="styles.css" />
+    <link rel="manifest" href="./manifest.webmanifest" />
   </head>
   <body>
     <script type="module" src="./src/common/security.js"></script>
@@ -73,5 +74,10 @@
     </div>
 
     <script type="module" src="./src/home/main.js"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js').catch(()=>{});
+      }
+    </script>
   </body>
   </html>
