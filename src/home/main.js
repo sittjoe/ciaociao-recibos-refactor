@@ -58,6 +58,15 @@ function setup() {
   });
 
   loadStatistics();
+
+  // Demo button: hide on GitHub Pages environment
+  const demoBtn = document.getElementById('demoBtn');
+  if (demoBtn) {
+    demoBtn.href = 'https://sittjoe.github.io/ciaociao-recibos-refactor/';
+    if (location.host.includes('github.io')) {
+      demoBtn.style.display = 'none';
+    }
+  }
 }
 
 document.addEventListener('DOMContentLoaded', setup);

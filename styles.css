@@ -21,6 +21,9 @@ body {
 .selector-title { margin: 0; font-size: 28px; letter-spacing: .06em; }
 .selector-subtitle { margin: 6px 0 0; color: var(--muted); }
 
+.btn-demo { display:inline-block; margin-top:10px; padding:10px 14px; border-radius:10px; color:#664f22; text-decoration:none;
+  background: linear-gradient(180deg, var(--gold-2), var(--gold-1)); border: 1px solid #a98e5b; }
+
 .mode-cards { display: grid; gap: 16px; grid-template-columns: repeat(3, 1fr); }
 .mode-card {
   background: #161616;
@@ -47,4 +50,3 @@ body {
 @media (max-width: 900px) {
   .mode-cards { grid-template-columns: 1fr; }
 }
-

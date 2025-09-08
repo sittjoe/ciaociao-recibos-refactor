@@ -5,6 +5,9 @@ Resumen
 - 100% estático con ES Modules, sin servidor Node necesario.
 - Misma experiencia visual y logos; código simplificado y organizado.
 
+Demo
+- Producción (GitHub Pages): https://sittjoe.github.io/ciaociao-recibos-refactor/
+
 Requisitos
 - Navegador moderno (soporte ES Modules)
 - Python 3 (opcional) para servir archivos estáticos
@@ -31,4 +34,3 @@ Notas
 - Guardado local con `localStorage` (sin backend requerido).
 - Generación de PDF usando `html2canvas` + `jsPDF` vía CDN.
 - Sanitización básica de inputs contentEditable.
-
