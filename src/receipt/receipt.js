@@ -371,6 +371,7 @@ function openDataModal() {
   $('#formClientPhone').value = $('#clientPhone').textContent.trim();
   $('#formClientEmail').value = $('#clientEmail').textContent.trim();
   $('#formClientAddress').value = $('#clientAddress').textContent.trim();
+  clearAllErrors('#dataModal');
   // Convertir fechas mostradas a YYYY-MM-DD si posible (heurística muy simple)
   const parseShown = (txt) => {
     // Intenta Date.parse directo o deja vacío
@@ -385,16 +386,30 @@ function openDataModal() {
 }
 function closeDataModal() { $('#dataModal').classList.remove('active'); }
 function saveDataFromModal() {
-  const name = $('#formClientName').value.trim();
-  const phone = $('#formClientPhone').value.trim();
-  const email = $('#formClientEmail').value.trim();
-  const address = $('#formClientAddress').value.trim();
-  const issue = $('#formIssueDate').value;
-  const delivery = $('#formDeliveryDate').value;
-  const validUntil = $('#formValidUntil').value;
-  if (!name) { showNotification('El nombre del cliente es requerido','error'); return; }
-  if (phone && phone.replace(/\D/g,'').length < 8) { showNotification('Teléfono inválido','error'); return; }
-  if (email && !/^\S+@\S+\.\S+$/.test(email)) { showNotification('Correo inválido','error'); return; }
+  const nameInput = $('#formClientName');
+  const phoneInput = $('#formClientPhone');
+  const emailInput = $('#formClientEmail');
+  const addressInput = $('#formClientAddress');
+  const issueInput = $('#formIssueDate');
+  const deliveryInput = $('#formDeliveryDate');
+  const validInput = $('#formValidUntil');
+
+  let valid = true;
+  clearAllErrors('#dataModal');
+
+  const name = nameInput.value.trim();
+  const phone = phoneInput.value.trim();
+  const email = emailInput.value.trim();
+  const address = addressInput.value.trim();
+  const issue = issueInput.value;
+  const delivery = deliveryInput.value;
+  const validUntil = validInput.value;
+
+  if (!name) { setFieldError(nameInput, 'Nombre requerido'); valid = false; }
+  if (phone && phone.replace(/\D/g,'').length < 8) { setFieldError(phoneInput, 'Teléfono inválido'); valid = false; }
+  if (email && !/^\S+@\S+\.\S+$/.test(email)) { setFieldError(emailInput, 'Correo inválido'); valid = false; }
+  if (issue && validUntil && new Date(validUntil) < new Date(issue)) { setFieldError(validInput, '“Válido hasta” debe ser posterior'); valid = false; }
+  if (!valid) return;
   $('#clientName').textContent = name;
   $('#clientPhone').textContent = phone || $('#clientPhone').textContent;
   $('#clientEmail').textContent = email || $('#clientEmail').textContent;
@@ -411,6 +426,7 @@ function saveDataFromModal() {
 // Item modal
 // =============
 function openItemModal(){
+  clearAllErrors('#itemModal');
   $('#formItemDesc').value = '';
   $('#formItemSku').value = '';
   $('#formItemQty').value = '1';
@@ -420,12 +436,21 @@ function openItemModal(){
 }
 function closeItemModal(){ $('#itemModal').classList.remove('active'); }
 function saveItemFromModal(){
-  const desc = $('#formItemDesc').value.trim();
-  const sku = $('#formItemSku').value.trim();
-  const qty = Math.max(1, parseInt($('#formItemQty').value || '1', 10));
-  const price = Math.max(0, parseFloat($('#formItemPrice').value || '0'));
-  const type = $('#formItemType').value;
-  if (!desc) { showNotification('La descripción es requerida','error'); return; }
+  const descInput = $('#formItemDesc');
+  const skuInput = $('#formItemSku');
+  const qtyInput = $('#formItemQty');
+  const priceInput = $('#formItemPrice');
+  const typeInput = $('#formItemType');
+  clearAllErrors('#itemModal');
+  let ok = true;
+  const desc = descInput.value.trim();
+  const sku = skuInput.value.trim();
+  let qty = parseInt(qtyInput.value || '1', 10); if (!Number.isFinite(qty) || qty < 1) { setFieldError(qtyInput, 'Cantidad mínima 1'); ok = false; }
+  let price = parseFloat(priceInput.value || '0'); if (!Number.isFinite(price) || price < 0) { setFieldError(priceInput, 'Precio inválido'); ok = false; }
+  const type = typeInput.value;
+  if (!desc) { setFieldError(descInput, 'Descripción requerida'); ok = false; }
+  if (!ok) return;
+  qty = Math.max(1, qty); price = Math.max(0, price);
   const tr = document.createElement('tr');
   tr.innerHTML = `
     <td class="editable" contenteditable>${desc}</td>
@@ -445,4 +470,27 @@ function saveItemFromModal(){
   recalc();
   closeItemModal();
   showNotification('Producto agregado','success');
+}
+
+// Helpers de validación
+function setFieldError(input, message){
+  input.classList.add('is-invalid');
+  let msg = input.nextElementSibling;
+  if (!msg || !msg.classList || !msg.classList.contains('error-message')){
+    msg = document.createElement('div');
+    msg.className = 'error-message';
+    input.parentElement.appendChild(msg);
+  }
+  msg.textContent = message;
+}
+function clearFieldError(input){
+  input.classList.remove('is-invalid');
+  const msg = input.nextElementSibling;
+  if (msg && msg.classList && msg.classList.contains('error-message')) msg.textContent = '';
+}
+function clearAllErrors(scope){
+  const root = typeof scope === 'string' ? document.querySelector(scope) : scope;
+  if (!root) return;
+  root.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+  root.querySelectorAll('.error-message').forEach(el => el.textContent = '');
 }

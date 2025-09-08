@@ -265,6 +265,7 @@ document.addEventListener('DOMContentLoaded', () => { bindUI(); init(); });
 // Datos modal (Cotización)
 // =============
 function openDataModal() {
+  clearAllErrors('#dataModal');
   $('#formClientName').value = $('#clientName').textContent.trim();
   $('#formClientPhone').value = $('#clientPhone').textContent.trim();
   $('#formClientEmail').value = $('#clientEmail').textContent.trim();
@@ -276,15 +277,25 @@ function openDataModal() {
 }
 function closeDataModal(){ $('#dataModal').classList.remove('active'); }
 function saveDataFromModal(){
-  const name = $('#formClientName').value.trim();
-  const phone = $('#formClientPhone').value.trim();
-  const email = $('#formClientEmail').value.trim();
-  const address = $('#formClientAddress').value.trim();
-  const issue = $('#formIssueDate').value;
-  const validUntil = $('#formValidUntil').value;
-  if (!name) { showNotification('El nombre del cliente es requerido','error'); return; }
-  if (phone && phone.replace(/\D/g,'').length < 8) { showNotification('Teléfono inválido','error'); return; }
-  if (email && !/^\S+@\S+\.\S+$/.test(email)) { showNotification('Correo inválido','error'); return; }
+  const nameInput = $('#formClientName');
+  const phoneInput = $('#formClientPhone');
+  const emailInput = $('#formClientEmail');
+  const addressInput = $('#formClientAddress');
+  const issueInput = $('#formIssueDate');
+  const validInput = $('#formValidUntil');
+  clearAllErrors('#dataModal');
+  let ok = true;
+  const name = nameInput.value.trim();
+  const phone = phoneInput.value.trim();
+  const email = emailInput.value.trim();
+  const address = addressInput.value.trim();
+  const issue = issueInput.value;
+  const validUntil = validInput.value;
+  if (!name) { setFieldError(nameInput, 'Nombre requerido'); ok = false; }
+  if (phone && phone.replace(/\D/g,'').length < 8) { setFieldError(phoneInput, 'Teléfono inválido'); ok = false; }
+  if (email && !/^\S+@\S+\.\S+$/.test(email)) { setFieldError(emailInput, 'Correo inválido'); ok = false; }
+  if (issue && validUntil && new Date(validUntil) < new Date(issue)) { setFieldError(validInput, '“Válido hasta” debe ser posterior'); ok = false; }
+  if (!ok) return;
   $('#clientName').textContent = name;
   $('#clientPhone').textContent = phone || $('#clientPhone').textContent;
   $('#clientEmail').textContent = email || $('#clientEmail').textContent;
@@ -294,4 +305,22 @@ function saveDataFromModal(){
   if (validUntil) $('#validUntil').textContent = fmt(validUntil);
   closeDataModal();
   saveQuoteAction();
+}
+
+// Helpers de validación
+function setFieldError(input, message){
+  input.classList.add('is-invalid');
+  let msg = input.nextElementSibling;
+  if (!msg || !msg.classList || !msg.classList.contains('error-message')){
+    msg = document.createElement('div');
+    msg.className = 'error-message';
+    input.parentElement.appendChild(msg);
+  }
+  msg.textContent = message;
+}
+function clearAllErrors(scope){
+  const root = typeof scope === 'string' ? document.querySelector(scope) : scope;
+  if (!root) return;
+  root.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+  root.querySelectorAll('.error-message').forEach(el => el.textContent = '');
 }
