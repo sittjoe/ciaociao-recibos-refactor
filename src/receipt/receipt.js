@@ -54,6 +54,14 @@ function recalc() {
     saldoEl.style.color = 'var(--error)';
     saldoEl.parentElement.style.background = '#fef2f2';
   }
+
+  // Update mobile summary
+  const msSubtotal = document.getElementById('msSubtotal');
+  const msTotal = document.getElementById('msTotal');
+  const msSaldo = document.getElementById('msSaldo');
+  if (msSubtotal) msSubtotal.textContent = '$' + formatNumber(subtotal);
+  if (msTotal) msTotal.textContent = $('#total').textContent;
+  if (msSaldo) msSaldo.textContent = $('#saldo').textContent;
 }
 
 function addRow() {
@@ -269,8 +277,14 @@ async function generatePNG() {
   try {
     showNotification('Generando PNG...', 'info');
     updateQR();
+    // Ocultar elementos no deseados
+    const toHide = $$('.delete-row, .clear-sig, .actions, .btn-back, .mobile-actions, .mobile-summary, .watermark');
+    const prevDisplay = new Map();
+    toHide.forEach(el => { if (el) { prevDisplay.set(el, el.style.display); el.style.display = 'none'; } });
     const element = document.querySelector('.gilded-frame');
-    const canvas = await html2canvas(element, { scale: 2, logging: false, useCORS: true, backgroundColor: '#ffffff', windowWidth: 900, windowHeight: element.scrollHeight });
+    const canvas = await html2canvas(element, { scale: 3, logging: false, useCORS: true, backgroundColor: '#ffffff', windowWidth: 900, windowHeight: element.scrollHeight });
+    // Restaurar
+    toHide.forEach(el => { if (el) el.style.display = prevDisplay.get(el) || ''; });
     const dataUrl = canvas.toDataURL('image/png');
     const a = document.createElement('a');
     a.href = dataUrl; a.download = `Recibo_${$('#receiptNumber').textContent}.png`;
@@ -291,6 +305,21 @@ function bindUI() {
   $('#share-whatsapp').addEventListener('click', shareWhatsApp);
   const pngBtn = document.getElementById('generate-png');
   if (pngBtn) pngBtn.addEventListener('click', generatePNG);
+  const ticketBtn = document.getElementById('open-ticket');
+  if (ticketBtn) ticketBtn.addEventListener('click', openTicketPreview);
+  // Mobile actions
+  const ms = document.getElementById('mobileSummary');
+  const ma = document.getElementById('mobileActions');
+  if (ms && ma) {
+    const show = window.matchMedia('(max-width: 768px)').matches;
+    ms.style.display = show ? 'flex' : 'none';
+    ma.style.display = show ? 'grid' : 'none';
+    document.getElementById('ma-add').addEventListener('click', addRow);
+    document.getElementById('ma-save').addEventListener('click', saveReceiptAction);
+    document.getElementById('ma-pdf').addEventListener('click', generatePDF);
+    document.getElementById('ma-png').addEventListener('click', generatePNG);
+    document.getElementById('ma-wa').addEventListener('click', shareWhatsApp);
+  }
   // Datos modal
   $('#edit-data').addEventListener('click', openDataModal);
   $('#closeDataModal').addEventListener('click', closeDataModal);
@@ -389,6 +418,11 @@ function bindUI() {
   const applyIvaInput = document.getElementById('applyIVA');
   if (ivaRateInput) ivaRateInput.addEventListener('input', () => recalc());
   if (applyIvaInput) applyIvaInput.addEventListener('change', () => recalc());
+}
+
+function openTicketPreview(){
+  try { localStorage.setItem('ticket_preview_data', JSON.stringify(collectReceiptData())); } catch {}
+  window.location.href = '../ticket/index.html';
 }
 
 function init() {

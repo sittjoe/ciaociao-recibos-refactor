@@ -90,6 +90,15 @@
       .is-invalid{ border-color: var(--error) !important; box-shadow: 0 0 0 2px rgba(220,38,38,0.08); }
       @media print{ body{ background:#fff; } .sheet{ margin:0; box-shadow:none; padding:0; } .actions, .watermark, .delete-row, .clear-sig, .btn-back{ display:none !important; } [contenteditable]{ background:transparent !important; padding:0 !important; margin:0 !important; } }
       @media (max-width:768px){ .btn-back{ position:static; margin-bottom:20px; } .header{ grid-template-columns:1fr; text-align:center; gap:16px; } .meta{ border-left:none; border-top:1px solid var(--line); padding:16px 0 0 0; justify-self:center; } .two-col{ grid-template-columns:1fr; } .totals{ grid-template-columns:1fr; } .signatures{ grid-template-columns:1fr; } .actions{ flex-direction:column; } .actions-left,.actions-right{ width:100%; justify-content:center; } }
+      /* Mobile floating summary + fixed actions */
+      @media (max-width: 768px) {
+        .actions { display: none; }
+        .mobile-summary { position: fixed; bottom: 64px; left: 0; right: 0; padding: 10px 14px; background: rgba(255,255,255,0.95); border-top: 1px solid var(--line); display: flex; justify-content: space-between; gap: 12px; z-index: 1000; }
+        .mobile-summary .item { font-size: 14px; }
+        .mobile-summary .item strong { font-size: 15px; }
+        .mobile-actions { position: fixed; bottom: 0; left: 0; right: 0; background: linear-gradient(180deg, var(--gold-2), var(--gold-1)); border-top: 1px solid var(--gold-3); display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; padding: 8px; z-index: 1001; }
+        .mobile-actions button { padding: 10px 8px; border-radius: 10px; border: 1px solid #a98e5b; background: #fff; color: #5b4a26; font-weight: 600; }
+      }
     </style>
   </head>
   <body>
@@ -347,7 +356,7 @@
             <div class="field"><div class="label">Nombre</div><div class="value">CIAO CIAO MX – Joyería Fina</div></div>
             <div class="field"><div class="label">Web</div><div class="value">www.ciaociao.mx</div></div>
             <div class="field"><div class="label">WhatsApp</div><div class="value">+52 1 55 9211 2643</div></div>
-            <div class="field"><div class="label">Correo</div><div class="value">hola@ciaociao.mx</div></div>
+            <div class="field"><div class="label">Correo</div><div class="value">info@ciaociao.mx</div></div>
           </div>
         </section>
 
@@ -366,16 +375,30 @@
             <button class="btn primary" id="share-whatsapp">📱 WhatsApp</button>
             <button class="btn success" id="generate-pdf">📥 PDF</button>
             <button class="btn" id="generate-png">🖼️ PNG</button>
+            <button class="btn" id="open-ticket">🧾 Ticket</button>
             <button class="btn" onclick="window.print()">🖨️ Imprimir</button>
           </div>
         </div>
 
-        <footer>
-          <span>© <span id="year"></span> CIAO CIAO MX</span><span class="sep">•</span>
-          <span>Sistema Premium de Recibos</span><span class="sep">•</span>
-          <span>Joyería Fina</span>
-        </footer>
+      <footer>
+        <span>© <span id="year"></span> CIAO CIAO MX</span><span class="sep">•</span>
+        <span>Joyería Fina</span>
+      </footer>
       </div>
+    </div>
+
+    <!-- Mobile UI -->
+    <div class="mobile-summary" id="mobileSummary" style="display:none;">
+      <div class="item">Subtotal: <strong id="msSubtotal">$0.00</strong></div>
+      <div class="item">Total: <strong id="msTotal">$0.00</strong></div>
+      <div class="item">Saldo: <strong id="msSaldo">$0.00</strong></div>
+    </div>
+    <div class="mobile-actions" id="mobileActions" style="display:none;">
+      <button id="ma-add">➕</button>
+      <button id="ma-save">💾</button>
+      <button id="ma-pdf">📥</button>
+      <button id="ma-png">🖼️</button>
+      <button id="ma-wa">📱</button>
     </div>
 
     <!-- Modal de clientes recientes -->

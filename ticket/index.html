@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ticket | CiaoCiao.mx – Joyería Fina</title>
+    <style>
+      :root { --ink:#111; }
+      body{ margin:0; background:#f8f8f8; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+      .ticket{ width:80mm; max-width:80mm; margin:12px auto; background:#fff; color:var(--ink); padding:6mm 4mm; border:1px dashed #ddd; }
+      .center{ text-align:center; }
+      .line{ display:flex; justify-content:space-between; }
+      .sep{ border-top:1px dashed #ccc; margin:6px 0; }
+      .small{ font-size:12px; }
+      .bold{ font-weight:700; }
+      .items{ margin:6px 0; }
+      .items .row{ display:flex; justify-content:space-between; margin:2px 0; }
+      .actions{ display:flex; gap:8px; justify-content:center; margin-top:8px; }
+      @media print{ body{ background:#fff; } .actions{ display:none; } .ticket{ border:none; margin:0; } }
+    </style>
+  </head>
+  <body>
+    <script type="module" src="../src/common/security.js"></script>
+    <div class="ticket" id="ticket">
+      <div class="center">
+        <div class="bold">CIAO CIAO MX</div>
+        <div>Joyería Fina</div>
+        <div class="small">www.ciaociao.mx • info@ciaociao.mx</div>
+        <div class="small">WhatsApp: +52 1 55 9211 2643</div>
+      </div>
+      <div class="sep"></div>
+      <div class="line small"><span id="tNumber">Folio: -</span><span id="tDate">Fecha: -</span></div>
+      <div class="line small"><span id="tClient">Cliente: -</span></div>
+      <div class="sep"></div>
+      <div class="items" id="tItems"></div>
+      <div class="sep"></div>
+      <div class="line small"><span>Subtotal</span><span id="tSubtotal">$0.00</span></div>
+      <div class="line small"><span>Descuento</span><span id="tDiscount">$0.00</span></div>
+      <div class="line small"><span>IVA</span><span id="tIva">$0.00</span></div>
+      <div class="line small"><span class="bold">TOTAL</span><span class="bold" id="tTotal">$0.00</span></div>
+      <div class="line small"><span>Anticipo</span><span id="tAdvance">$0.00</span></div>
+      <div class="line small"><span>Saldo</span><span id="tBalance">$0.00</span></div>
+      <div class="sep"></div>
+      <div class="center small">Garantía de por vida</div>
+      <div class="center small">¡Gracias por su compra!</div>
+    </div>
+    <div class="actions">
+      <button onclick="window.print()">Imprimir</button>
+      <button id="backBtn">Volver</button>
+    </div>
+    <script type="module" src="../src/ticket/ticket.js"></script>
+  </body>
+  </html>
+
