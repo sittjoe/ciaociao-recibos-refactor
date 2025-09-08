@@ -4,6 +4,7 @@ const APP_SHELL = [
   './index.html',
   './styles.css',
   './manifest.webmanifest',
+  './assets/logo.png',
   './src/home/main.js',
   './receipt/index.html',
   './src/receipt/receipt.js',
@@ -48,4 +49,3 @@ self.addEventListener('fetch', (e) => {
     }).catch(() => res))
   );
 });
-
