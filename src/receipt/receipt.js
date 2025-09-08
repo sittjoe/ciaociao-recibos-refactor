@@ -225,6 +225,8 @@ async function generatePDF() {
     showNotification('Generando PDF...', 'info');
     saveReceiptAction();
     updateQR();
+    document.body.classList.add('exporting');
+    const restoreLogo = ensureExportLogo();
     $$('.delete-row, .clear-sig, .actions, .watermark, .btn-back').forEach(el => { if (el) el.style.display = 'none'; });
     const element = document.querySelector('.gilded-frame');
     const canvas = await html2canvas(element, { scale: 2, logging: false, useCORS: true, backgroundColor: '#ffffff', windowWidth: 900, windowHeight: element.scrollHeight });
@@ -253,6 +255,9 @@ async function generatePDF() {
     showNotification('PDF generado correctamente', 'success');
   } catch (e) {
     console.error(e); showNotification('Error al generar PDF', 'error');
+  } finally {
+    document.body.classList.remove('exporting');
+    try { const fn = ensureExportLogo; if (fn) restoreLogo && restoreLogo(); } catch {}
   }
 }
 
@@ -279,6 +284,8 @@ async function generatePNG() {
   try {
     showNotification('Generando PNG...', 'info');
     updateQR();
+    document.body.classList.add('exporting');
+    const restoreLogo = ensureExportLogo();
     // Ocultar elementos no deseados
     const toHide = $$('.delete-row, .clear-sig, .actions, .btn-back, .mobile-actions, .mobile-summary, .watermark');
     const prevDisplay = new Map();
@@ -293,6 +300,10 @@ async function generatePNG() {
     document.body.appendChild(a); a.click(); a.remove();
     showNotification('PNG generado', 'success');
   } catch (e) { console.error(e); showNotification('Error al generar PNG','error'); }
+  finally {
+    document.body.classList.remove('exporting');
+    try { const fn = ensureExportLogo; if (fn) restoreLogo && restoreLogo(); } catch {}
+  }
 }
 
 function bindUI() {
@@ -666,6 +677,35 @@ function clearAllErrors(scope){
   if (!root) return;
   root.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
   root.querySelectorAll('.error-message').forEach(el => el.textContent = '');
+}
+
+// Ensure logo is export-safe (fallback to inline SVG if remote blocks CORS)
+function ensureExportLogo(){
+  const img = document.querySelector('.brand img');
+  if (!img) return () => {};
+  const original = img.src;
+  // If image naturalWidth is 0, or cross-origin likely to fail, replace with inline SVG text
+  let replaced = false;
+  const makeSvgData = () => {
+    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='300' height='60'>
+      <rect width='100%' height='100%' fill='white'/>
+      <text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='Playfair Display, serif' font-size='20' fill='#1f2937'>CIAO CIAO MX</text>
+      <text x='50%' y='80%' dominant-baseline='middle' text-anchor='middle' font-family='Inter, sans-serif' font-size='12' fill='#6b7280'>Joyería Fina</text>
+    </svg>`;
+    return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  };
+  try {
+    if (!img.complete || !img.naturalWidth) {
+      img.dataset.exportOriginal = original;
+      img.src = makeSvgData();
+      replaced = true;
+    }
+  } catch {
+    img.dataset.exportOriginal = original;
+    img.src = makeSvgData();
+    replaced = true;
+  }
+  return () => { if (replaced && img.dataset.exportOriginal) { img.src = img.dataset.exportOriginal; delete img.dataset.exportOriginal; } };
 }
 
 // =============

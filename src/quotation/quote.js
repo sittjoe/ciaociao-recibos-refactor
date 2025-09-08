@@ -148,6 +148,7 @@ async function generatePDF() {
     showNotification('Generando PDF...','info');
     saveQuoteAction();
     updateQR();
+    document.body.classList.add('exporting');
     const element = document.querySelector('.gilded-frame');
     const canvas = await html2canvas(element, { scale: 2, logging: false, useCORS: true, backgroundColor: '#ffffff', windowWidth: 900, windowHeight: element.scrollHeight });
     const { jsPDF } = window.jspdf; const fmt = (JSON.parse(localStorage.getItem('app_settings')||'{}').pdfFormat)||'letter';
@@ -167,6 +168,7 @@ async function generatePDF() {
     pdf.save(fileName);
     showNotification('PDF generado correctamente','success');
   } catch (e) { console.error(e); showNotification('Error al generar PDF','error'); }
+  finally { document.body.classList.remove('exporting'); }
 }
 
 function shareWhatsApp() {
@@ -329,6 +331,7 @@ document.addEventListener('DOMContentLoaded', () => { bindUI(); init(); });
 async function generatePNG(){
   try {
     showNotification('Generando PNG...','info');
+    document.body.classList.add('exporting');
     const element = document.querySelector('.gilded-frame');
     const canvas = await html2canvas(element, { scale: 2, logging: false, useCORS: true, backgroundColor: '#ffffff', windowWidth: 900, windowHeight: element.scrollHeight });
     const dataUrl = canvas.toDataURL('image/png');
@@ -336,6 +339,7 @@ async function generatePNG(){
     document.body.appendChild(a); a.click(); a.remove();
     showNotification('PNG generado','success');
   } catch(e){ console.error(e); showNotification('Error al generar PNG','error'); }
+  finally { document.body.classList.remove('exporting'); }
 }
 
 // Clientes recientes (reutiliza recibos + cotizaciones guardadas)
