@@ -6,6 +6,8 @@
     <title>Sistema de Gestión – ciaociao.mx</title>
     <link rel="stylesheet" href="styles.css" />
     <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./assets/logo.png" type="image/png" />
+    <link rel="apple-touch-icon" href="./assets/logo-192.png" />
   </head>
   <body>
     <script type="module" src="./src/common/security.js"></script>
@@ -75,9 +77,11 @@
 
     <script type="module" src="./src/home/main.js"></script>
     <script>
+      // Unregister any previous service workers to rely on live content (online-only scenario)
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js').catch(()=>{});
+        navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister()));
       }
+      if (window.caches && caches.keys) { caches.keys().then(keys => keys.forEach(k => caches.delete(k))).catch(()=>{}); }
     </script>
   </body>
   </html>

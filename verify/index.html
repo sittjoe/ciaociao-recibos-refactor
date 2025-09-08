@@ -55,8 +55,9 @@
     <script type="module" src="../src/verify/verify.js"></script>
     <script>
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('../sw.js').catch(()=>{});
+        navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister()));
       }
+      if (window.caches && caches.keys) { caches.keys().then(keys => keys.forEach(k => caches.delete(k))).catch(()=>{}); }
     </script>
   </body>
   </html>
