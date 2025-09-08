@@ -161,6 +161,11 @@
             <input id="formValidUntil" type="date" style="width:100%; padding:10px; border:1px solid #e5e5e5; border-radius:8px;" />
           </label>
         </div>
+        <div style="display:flex; gap:8px; margin-top:8px;">
+          <button class="btn secondary" id="dateTodayBtn">Hoy</button>
+          <button class="btn secondary" id="datePlus7Btn">Entrega +7 días</button>
+          <button class="btn secondary" id="datePlus30Btn">Válido +30 días</button>
+        </div>
         <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px;">
           <button class="btn" id="closeDataModal">Cancelar</button>
           <button class="btn success" id="saveDataModal">Guardar</button>
@@ -261,7 +266,7 @@
                   <th class="right">IMPORTE</th>
                   <th class="center">SKU/CÓDIGO</th>
                   <th class="center">TIPO</th>
-                  <th></th>
+                  <th class="center">ACCIONES</th>
                 </tr>
               </thead>
               <tbody id="itemsBody">
@@ -278,7 +283,12 @@
                       <option value="reparacion">Reparación</option>
                     </select>
                   </td>
-                  <td style="position:relative;"><span class="delete-row" data-action="delete-row">×</span></td>
+                  <td class="center" style="position:relative; white-space:nowrap;">
+                    <button class="delete-row" title="Eliminar" data-action="delete-row">×</button>
+                    <button class="btn" style="padding:4px 6px; font-size:12px;" title="Duplicar" data-action="row-dup">⎘</button>
+                    <button class="btn" style="padding:4px 6px; font-size:12px;" title="Subir" data-action="row-up">↑</button>
+                    <button class="btn" style="padding:4px 6px; font-size:12px;" title="Bajar" data-action="row-down">↓</button>
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -290,14 +300,24 @@
               <p class="editable" contenteditable id="observations">Joyas inspeccionadas y entregadas en perfecto estado. Se recomienda evitar contacto con químicos. Servicio de ajuste/limpieza disponible.</p>
               <p class="editable" contenteditable id="policy"><strong>Política:</strong> Garantía de por vida en mano de obra. Cambios sólo por defecto de fabricación dentro de 7 días.</p>
             </div>
-            <div class="sum-card" id="totales">
-              <div class="row"><div>Subtotal</div><div class="right" id="subtotal">0.00</div></div>
-              <div class="row"><div>Descuento</div><div class="right editable" contenteditable id="descuento">0.00</div></div>
-              <div class="row"><div>Aportación</div><div class="right editable" contenteditable id="aportacion">0.00</div></div>
-              <div class="row"><div>IVA (16%)</div><div class="right" id="iva">0.00</div></div>
-              <div class="row"><div>Anticipo</div><div class="right editable" contenteditable id="anticipo">0.00</div></div>
-              <div class="row total"><div>Total</div><div class="right" id="total">$0.00</div></div>
-              <div class="row" style="background:#f0fdf4;"><div>Saldo Pendiente</div><div class="right" id="saldo" style="color:var(--success); font-weight:700;">$0.00</div></div>
+            <div>
+              <div style="display:flex; gap:8px; align-items:center; margin:0 0 8px 0;">
+                <label style="font-size:12px; color:var(--muted);">Aplicar IVA
+                  <input type="checkbox" id="applyIVA" style="margin-left:6px;" checked />
+                </label>
+                <label style="font-size:12px; color:var(--muted);">IVA (%)
+                  <input type="number" id="ivaRate" value="16" min="0" max="100" step="0.1" style="width:70px; margin-left:6px; padding:6px 8px; border:1px solid var(--line); border-radius:8px;" />
+                </label>
+              </div>
+              <div class="sum-card" id="totales">
+                <div class="row"><div>Subtotal</div><div class="right" id="subtotal">0.00</div></div>
+                <div class="row"><div>Descuento</div><div class="right editable" contenteditable id="descuento">0.00</div></div>
+                <div class="row"><div>Aportación</div><div class="right editable" contenteditable id="aportacion">0.00</div></div>
+                <div class="row"><div>IVA (16%)</div><div class="right" id="iva">0.00</div></div>
+                <div class="row"><div>Anticipo</div><div class="right editable" contenteditable id="anticipo">0.00</div></div>
+                <div class="row total"><div>Total</div><div class="right" id="total">$0.00</div></div>
+                <div class="row" style="background:#f0fdf4;"><div>Saldo Pendiente</div><div class="right" id="saldo" style="color:var(--success); font-weight:700;">$0.00</div></div>
+              </div>
             </div>
           </div>
         </section>
@@ -330,15 +350,18 @@
         <div class="actions no-print">
           <div class="actions-left">
             <button class="btn secondary" id="edit-data">✏️ Editar datos</button>
+            <button class="btn secondary" id="pick-client">👤 Seleccionar cliente</button>
             <button class="btn secondary" id="add-row">➕ Agregar</button>
             <button class="btn secondary" id="add-item-form">➕ Agregar (form)</button>
             <button class="btn secondary" id="save-receipt">💾 Guardar</button>
             <button class="btn secondary" id="new-receipt">📄 Nuevo</button>
             <button class="btn secondary" id="show-history">📚 Historial</button>
+            <button class="btn secondary" id="openSettings">⚙️ Ajustes</button>
           </div>
           <div class="actions-right">
             <button class="btn primary" id="share-whatsapp">📱 WhatsApp</button>
             <button class="btn success" id="generate-pdf">📥 PDF</button>
+            <button class="btn" id="generate-png">🖼️ PNG</button>
             <button class="btn" onclick="window.print()">🖨️ Imprimir</button>
           </div>
         </div>
@@ -348,6 +371,44 @@
           <span>Sistema Premium de Recibos</span><span class="sep">•</span>
           <span>Joyería Fina</span>
         </footer>
+      </div>
+    </div>
+
+    <!-- Modal de clientes recientes -->
+    <div id="clientsModal" class="history-modal">
+      <div class="history-modal-content" style="max-width:720px;">
+        <h3>Seleccionar cliente</h3>
+        <input id="clientSearch" placeholder="Buscar cliente..." style="width:100%; padding:10px; border:1px solid #e5e5e5; border-radius:8px;" />
+        <table class="history-table" style="margin-top:10px;">
+          <thead><tr><th>Nombre</th><th>Teléfono</th><th>Correo</th><th>Dirección</th><th></th></tr></thead>
+          <tbody id="clientsTableBody"></tbody>
+        </table>
+        <div style="text-align:right; margin-top:12px;"><button class="btn" id="closeClientsModal">Cerrar</button></div>
+      </div>
+    </div>
+
+    <!-- Modal de ajustes -->
+    <div id="settingsModal" class="history-modal">
+      <div class="history-modal-content" style="max-width:560px;">
+        <h3>Ajustes</h3>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <label class="form-label">IVA por defecto (%)
+            <input id="settingsIvaRate" type="number" min="0" max="100" step="0.1" style="width:100%; padding:10px; border:1px solid #e5e5e5; border-radius:8px;" />
+          </label>
+          <label class="form-label">Aplicar IVA por defecto
+            <select id="settingsApplyIVA" style="width:100%; padding:10px; border:1px solid #e5e5e5; border-radius:8px;">
+              <option value="true">Sí</option>
+              <option value="false">No</option>
+            </select>
+          </label>
+          <label class="form-label">Días de validez por defecto
+            <input id="settingsValidityDays" type="number" min="0" step="1" style="width:100%; padding:10px; border:1px solid #e5e5e5; border-radius:8px;" />
+          </label>
+        </div>
+        <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px;">
+          <button class="btn" id="closeSettingsModal">Cancelar</button>
+          <button class="btn success" id="saveSettingsModal">Guardar</button>
+        </div>
       </div>
     </div>
 

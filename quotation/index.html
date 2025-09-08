@@ -170,7 +170,7 @@
                   <th class="right">PRECIO</th>
                   <th class="right">IMPORTE</th>
                   <th class="center">SKU/CÓDIGO</th>
-                  <th></th>
+                  <th class="center">ACCIONES</th>
                 </tr>
               </thead>
               <tbody id="itemsBody">
@@ -180,7 +180,12 @@
                   <td class="right editable price" contenteditable>0.00</td>
                   <td class="right subtotal">0.00</td>
                   <td class="center editable" contenteditable>—</td>
-                  <td style="position:relative;"><span class="delete-row" data-action="delete-row">×</span></td>
+                  <td class="center" style="position:relative; white-space:nowrap;">
+                    <button class="delete-row" title="Eliminar" data-action="delete-row">×</button>
+                    <button class="btn" style="padding:4px 6px; font-size:12px;" title="Duplicar" data-action="row-dup">⎘</button>
+                    <button class="btn" style="padding:4px 6px; font-size:12px;" title="Subir" data-action="row-up">↑</button>
+                    <button class="btn" style="padding:4px 6px; font-size:12px;" title="Bajar" data-action="row-down">↓</button>
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -191,11 +196,21 @@
               <p><strong>Observaciones</strong></p>
               <p class="editable" contenteditable id="observations">Esta cotización es válida por 30 días. Los precios pueden variar según cambios en insumos.</p>
             </div>
-            <div class="sum-card" id="totales">
+            <div>
+              <div style="display:flex; gap:8px; align-items:center; margin:0 0 8px 0;">
+                <label style="font-size:12px; color:var(--muted);">Aplicar IVA
+                  <input type="checkbox" id="applyIVA" style="margin-left:6px;" checked />
+                </label>
+                <label style="font-size:12px; color:var(--muted);">IVA (%)
+                  <input type="number" id="ivaRate" value="16" min="0" max="100" step="0.1" style="width:70px; margin-left:6px; padding:6px 8px; border:1px solid var(--line); border-radius:8px;" />
+                </label>
+              </div>
+              <div class="sum-card" id="totales">
               <div class="row"><div>Subtotal</div><div class="right" id="subtotal">0.00</div></div>
               <div class="row"><div>Descuento</div><div class="right editable" contenteditable id="descuento">0.00</div></div>
               <div class="row"><div>IVA (16%)</div><div class="right" id="iva">0.00</div></div>
               <div class="row total"><div>Total</div><div class="right" id="total">$0.00</div></div>
+              </div>
             </div>
           </div>
         </section>
@@ -203,6 +218,7 @@
         <div class="actions no-print">
           <div class="actions-left">
             <button class="btn secondary" id="edit-data">✏️ Editar datos</button>
+            <button class="btn secondary" id="pick-client">👤 Seleccionar cliente</button>
             <button class="btn secondary" id="add-row">➕ Agregar</button>
             <button class="btn secondary" id="save-quote">💾 Guardar</button>
             <button class="btn secondary" id="new-quote">📄 Nuevo</button>
@@ -211,10 +227,24 @@
           <div class="actions-right">
             <button class="btn primary" id="share-whatsapp">📱 WhatsApp</button>
             <button class="btn success" id="generate-pdf">📥 PDF</button>
+            <button class="btn" id="generate-png">🖼️ PNG</button>
             <button class="btn" id="convert-to-receipt">↪ Convertir a Recibo</button>
           </div>
         </div>
 
+      </div>
+    </div>
+
+    <!-- Modal de clientes recientes -->
+    <div id="clientsModal" class="history-modal">
+      <div class="history-modal-content" style="max-width:720px;">
+        <h3>Seleccionar cliente</h3>
+        <input id="clientSearch" placeholder="Buscar cliente..." style="width:100%; padding:10px; border:1px solid #e5e5e5; border-radius:8px;" />
+        <table class="history-table" style="margin-top:10px;">
+          <thead><tr><th>Nombre</th><th>Teléfono</th><th>Correo</th><th>Dirección</th><th></th></tr></thead>
+          <tbody id="clientsTableBody"></tbody>
+        </table>
+        <div style="text-align:right; margin-top:12px;"><button class="btn" id="closeClientsModal">Cerrar</button></div>
       </div>
     </div>
 

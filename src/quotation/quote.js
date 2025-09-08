@@ -30,7 +30,9 @@ function recalc() {
   $('#subtotal').textContent = formatNumber(subtotal);
   const descuento = parseMoney($('#descuento')?.textContent);
   const base = Math.max(subtotal - descuento, 0);
-  const iva = base * 0.16;
+  const applyIVA = document.getElementById('applyIVA')?.checked ?? true;
+  const ivaRate = parseFloat(document.getElementById('ivaRate')?.value || '16') || 16;
+  const iva = applyIVA ? base * (ivaRate / 100) : 0;
   $('#iva').textContent = formatNumber(iva);
   $('#total').textContent = formatMoney(base + iva);
 }
@@ -43,7 +45,12 @@ function addRow() {
     <td class="right editable price" contenteditable>0.00</td>
     <td class="right subtotal">0.00</td>
     <td class="center editable" contenteditable>—</td>
-    <td style="position:relative;"><span class="delete-row" data-action="delete-row">×</span></td>`;
+    <td class="center" style="position:relative; white-space:nowrap;">
+      <button class="delete-row" title="Eliminar" data-action="delete-row">×</button>
+      <button class="btn" style="padding:4px 6px; font-size:12px;" title="Duplicar" data-action="row-dup">⎘</button>
+      <button class="btn" style="padding:4px 6px; font-size:12px;" title="Subir" data-action="row-up">↑</button>
+      <button class="btn" style="padding:4px 6px; font-size:12px;" title="Bajar" data-action="row-down">↓</button>
+    </td>`;
   $('#itemsBody').appendChild(tr);
   tr.querySelector('.editable').focus();
   showNotification('Producto agregado','success');
@@ -194,6 +201,8 @@ function bindUI() {
   $('#searchHistory').addEventListener('input', e => searchHistory(e.target.value));
   $('#generate-pdf').addEventListener('click', generatePDF);
   $('#share-whatsapp').addEventListener('click', shareWhatsApp);
+  const pngBtn = document.getElementById('generate-png');
+  if (pngBtn) pngBtn.addEventListener('click', generatePNG);
   $('#convert-to-receipt').addEventListener('click', convertToReceipt);
   // Datos modal
   $('#edit-data').addEventListener('click', openDataModal);
@@ -206,6 +215,15 @@ function bindUI() {
       const tr = del.closest('tr'); const tbody = tr?.parentElement;
       if (tbody && tbody.children.length > 1) { tr.remove(); recalc(); showNotification('Producto eliminado','success'); }
       else showNotification('Debe mantener al menos un producto','error');
+    }
+    const btn = e.target.closest('[data-action]');
+    if (btn) {
+      const action = btn.getAttribute('data-action');
+      const tr = btn.closest('tr');
+      const tbody = tr?.parentElement;
+      if (action === 'row-dup' && tr && tbody) { const clone = tr.cloneNode(true); tbody.insertBefore(clone, tr.nextSibling); recalc(); }
+      if (action === 'row-up' && tr && tbody) { const prev = tr.previousElementSibling; if (prev) tbody.insertBefore(tr, prev); recalc(); }
+      if (action === 'row-down' && tr && tbody) { const next = tr.nextElementSibling; if (next) tbody.insertBefore(next, tr); recalc(); }
     }
   });
 
@@ -268,6 +286,52 @@ function init() {
 }
 
 document.addEventListener('DOMContentLoaded', () => { bindUI(); init(); });
+
+async function generatePNG(){
+  try {
+    showNotification('Generando PNG...','info');
+    const element = document.querySelector('.gilded-frame');
+    const canvas = await html2canvas(element, { scale: 2, logging: false, useCORS: true, backgroundColor: '#ffffff', windowWidth: 900, windowHeight: element.scrollHeight });
+    const dataUrl = canvas.toDataURL('image/png');
+    const a = document.createElement('a'); a.href = dataUrl; a.download = `Cotizacion_${$('#quoteNumber').textContent}.png`;
+    document.body.appendChild(a); a.click(); a.remove();
+    showNotification('PNG generado','success');
+  } catch(e){ console.error(e); showNotification('Error al generar PNG','error'); }
+}
+
+// Clientes recientes (reutiliza recibos + cotizaciones guardadas)
+function openClientsModal(){ renderClientsTable(''); document.getElementById('clientsModal').classList.add('active'); }
+function closeClientsModal(){ document.getElementById('clientsModal').classList.remove('active'); }
+function renderClientsTable(query){
+  const q = (query||'').toLowerCase();
+  const tbody = document.getElementById('clientsTableBody');
+  const list = aggregateClients().filter(c => (c.name||'').toLowerCase().includes(q) || (c.phone||'').toLowerCase().includes(q) || (c.email||'').toLowerCase().includes(q));
+  tbody.innerHTML='';
+  list.slice(0,50).forEach(c => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${c.name||''}</td><td>${c.phone||''}</td><td>${c.email||''}</td><td>${c.address||''}</td><td><button class=\"btn\" data-pick=\"${encodeURIComponent(JSON.stringify(c))}\">Elegir</button></td>`;
+    tbody.appendChild(tr);
+  });
+  tbody.onclick = (e)=>{
+    const btn = e.target.closest('button[data-pick]');
+    if (!btn) return;
+    const c = JSON.parse(decodeURIComponent(btn.getAttribute('data-pick')));
+    if (c.name) document.getElementById('clientName').textContent = c.name;
+    if (c.phone) document.getElementById('clientPhone').textContent = c.phone;
+    if (c.email) document.getElementById('clientEmail').textContent = c.email;
+    if (c.address) document.getElementById('clientAddress').textContent = c.address;
+    closeClientsModal();
+  };
+}
+function aggregateClients(){
+  const out = [];
+  try { (JSON.parse(localStorage.getItem('premium_receipts_ciaociao')||'[]')||[]).forEach(r => out.push(r.client||{})); } catch {}
+  try { (JSON.parse(localStorage.getItem('quotations_ciaociao')||'[]')||[]).forEach(r => out.push(r.client||{})); } catch {}
+  const seen = new Set();
+  const uniq = [];
+  out.forEach(c => { const key = `${c.name||''}|${c.phone||''}|${c.email||''}|${c.address||''}`; if (seen.has(key)) return; seen.add(key); uniq.push(c); });
+  return uniq;
+}
 
 // =============
 // Datos modal (Cotización)

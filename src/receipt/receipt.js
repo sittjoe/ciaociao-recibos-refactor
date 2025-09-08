@@ -34,7 +34,11 @@ function recalc() {
   const aportacion = parseMoney($('#aportacion')?.textContent);
   const baseConDescuento = Math.max(subtotal - descuento, 0);
   const baseTotal = baseConDescuento + aportacion;
-  const iva = baseTotal * 0.16;
+  const applyIvaEl = document.getElementById('applyIVA');
+  const ivaRateEl = document.getElementById('ivaRate');
+  const applyIVA = applyIvaEl ? applyIvaEl.checked : true;
+  const ivaRate = ivaRateEl ? (parseFloat(ivaRateEl.value) || 0) : 16;
+  const iva = applyIVA ? baseTotal * (ivaRate / 100) : 0;
   $('#iva').textContent = formatNumber(iva);
   const total = baseTotal + iva;
   $('#total').textContent = formatMoney(total);
@@ -67,7 +71,12 @@ function addRow() {
         <option value="reparacion">Reparación</option>
       </select>
     </td>
-    <td style="position:relative;"><span class="delete-row" data-action="delete-row">×</span></td>`;
+    <td class="center" style="position:relative; white-space:nowrap;">
+      <button class="delete-row" title="Eliminar" data-action="delete-row">×</button>
+      <button class="btn" style="padding:4px 6px; font-size:12px;" title="Duplicar" data-action="row-dup">⎘</button>
+      <button class="btn" style="padding:4px 6px; font-size:12px;" title="Subir" data-action="row-up">↑</button>
+      <button class="btn" style="padding:4px 6px; font-size:12px;" title="Bajar" data-action="row-down">↓</button>
+    </td>`;
   $('#itemsBody').appendChild(tr);
   tr.querySelector('.editable').focus();
   showNotification('Producto agregado', 'success');
@@ -254,6 +263,19 @@ function shareWhatsApp() {
   showNotification('Abriendo WhatsApp...', 'success');
 }
 
+async function generatePNG() {
+  try {
+    showNotification('Generando PNG...', 'info');
+    const element = document.querySelector('.gilded-frame');
+    const canvas = await html2canvas(element, { scale: 2, logging: false, useCORS: true, backgroundColor: '#ffffff', windowWidth: 900, windowHeight: element.scrollHeight });
+    const dataUrl = canvas.toDataURL('image/png');
+    const a = document.createElement('a');
+    a.href = dataUrl; a.download = `Recibo_${$('#receiptNumber').textContent}.png`;
+    document.body.appendChild(a); a.click(); a.remove();
+    showNotification('PNG generado', 'success');
+  } catch (e) { console.error(e); showNotification('Error al generar PNG','error'); }
+}
+
 function bindUI() {
   const yearEl = $('#year'); if (yearEl) yearEl.textContent = new Date().getFullYear();
   $('#add-row').addEventListener('click', addRow);
@@ -264,14 +286,45 @@ function bindUI() {
   $('#searchHistory').addEventListener('input', e => searchHistory(e.target.value));
   $('#generate-pdf').addEventListener('click', generatePDF);
   $('#share-whatsapp').addEventListener('click', shareWhatsApp);
+  const pngBtn = document.getElementById('generate-png');
+  if (pngBtn) pngBtn.addEventListener('click', generatePNG);
   // Datos modal
   $('#edit-data').addEventListener('click', openDataModal);
   $('#closeDataModal').addEventListener('click', closeDataModal);
   $('#saveDataModal').addEventListener('click', saveDataFromModal);
+  const dToday = document.getElementById('dateTodayBtn');
+  const dPlus7 = document.getElementById('datePlus7Btn');
+  const dPlus30 = document.getElementById('datePlus30Btn');
+  if (dToday) dToday.addEventListener('click', () => {
+    const t = new Date();
+    document.getElementById('formIssueDate').value = t.toISOString().slice(0,10);
+  });
+  if (dPlus7) dPlus7.addEventListener('click', () => {
+    const t = new Date(); t.setDate(t.getDate()+7);
+    document.getElementById('formDeliveryDate').value = t.toISOString().slice(0,10);
+  });
+  if (dPlus30) dPlus30.addEventListener('click', () => {
+    const t = new Date(); t.setDate(t.getDate()+30);
+    document.getElementById('formValidUntil').value = t.toISOString().slice(0,10);
+  });
   // Item modal
   $('#add-item-form').addEventListener('click', openItemModal);
   $('#closeItemModal').addEventListener('click', closeItemModal);
   $('#saveItemModal').addEventListener('click', saveItemFromModal);
+  // Clientes
+  const pickClient = document.getElementById('pick-client');
+  if (pickClient) pickClient.addEventListener('click', openClientsModal);
+  const closeClientsBtn = document.getElementById('closeClientsModal');
+  if (closeClientsBtn) closeClientsBtn.addEventListener('click', closeClientsModal);
+  const clientSearch = document.getElementById('clientSearch');
+  if (clientSearch) clientSearch.addEventListener('input', e => renderClientsTable(e.target.value));
+  // Ajustes
+  const openSettingsBtn = document.getElementById('openSettings');
+  if (openSettingsBtn) openSettingsBtn.addEventListener('click', openSettingsModal);
+  const closeSettingsBtn = document.getElementById('closeSettingsModal');
+  if (closeSettingsBtn) closeSettingsBtn.addEventListener('click', closeSettingsModal);
+  const saveSettingsBtn = document.getElementById('saveSettingsModal');
+  if (saveSettingsBtn) saveSettingsBtn.addEventListener('click', saveSettingsFromModal);
 
   document.body.addEventListener('click', e => {
     const del = e.target.closest('[data-action="delete-row"]');
@@ -279,6 +332,23 @@ function bindUI() {
       const tr = del.closest('tr');
       const tbody = tr?.parentElement; if (tbody && tbody.children.length > 1) { tr.remove(); recalc(); showNotification('Producto eliminado','success'); }
       else showNotification('Debe mantener al menos un producto','error');
+    }
+    const actBtn = e.target.closest('[data-action]');
+    if (actBtn) {
+      const action = actBtn.getAttribute('data-action');
+      const tr = actBtn.closest('tr');
+      const tbody = tr?.parentElement;
+      if (action === 'row-dup' && tr && tbody) {
+        const clone = tr.cloneNode(true);
+        tbody.insertBefore(clone, tr.nextSibling);
+        recalc();
+      }
+      if (action === 'row-up' && tr && tbody) {
+        const prev = tr.previousElementSibling; if (prev) tbody.insertBefore(tr, prev); recalc();
+      }
+      if (action === 'row-down' && tr && tbody) {
+        const next = tr.nextElementSibling; if (next) tbody.insertBefore(next, tr); recalc();
+      }
     }
     const clear = e.target.closest('[data-action="clear-signature"]');
     if (clear) clearSignature(clear.getAttribute('data-type'));
@@ -310,9 +380,29 @@ function bindUI() {
     if ((e.ctrlKey || e.metaKey) && e.key === 'p') { e.preventDefault(); generatePDF(); }
     if (e.key === 'Escape') { closeSignatureModal(); closeHistory(); }
   });
+
+  // IVA controls
+  const ivaRateInput = document.getElementById('ivaRate');
+  const applyIvaInput = document.getElementById('applyIVA');
+  if (ivaRateInput) ivaRateInput.addEventListener('input', () => recalc());
+  if (applyIvaInput) applyIvaInput.addEventListener('change', () => recalc());
 }
 
 function init() {
+  // Load defaults
+  try {
+    const s = JSON.parse(localStorage.getItem('app_settings')||'{}');
+    if (s && typeof s === 'object') {
+      const applyIvaEl = document.getElementById('applyIVA');
+      const ivaRateEl = document.getElementById('ivaRate');
+      if (applyIvaEl && typeof s.applyIVA === 'boolean') applyIvaEl.checked = s.applyIVA;
+      if (ivaRateEl && typeof s.ivaRate !== 'undefined') ivaRateEl.value = s.ivaRate;
+      if (typeof s.validityDays === 'number') {
+        const now = new Date(); const v = new Date(now); v.setDate(v.getDate() + s.validityDays);
+        $('#validUntil').textContent = formatDate(v);
+      }
+    }
+  } catch {}
   const number = generateReceiptNumber();
   $('#receiptNumber').textContent = number;
   setCurrentReceiptId(`receipt_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`);
@@ -501,4 +591,71 @@ function clearAllErrors(scope){
   if (!root) return;
   root.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
   root.querySelectorAll('.error-message').forEach(el => el.textContent = '');
+}
+
+// =============
+// Ajustes (IVA y validez)
+// =============
+function openSettingsModal(){
+  try {
+    const s = JSON.parse(localStorage.getItem('app_settings')||'{}');
+    if (s) {
+      if (typeof s.ivaRate !== 'undefined') document.getElementById('settingsIvaRate').value = s.ivaRate;
+      if (typeof s.applyIVA !== 'undefined') document.getElementById('settingsApplyIVA').value = String(!!s.applyIVA);
+      if (typeof s.validityDays !== 'undefined') document.getElementById('settingsValidityDays').value = s.validityDays;
+    }
+  } catch {}
+  document.getElementById('settingsModal').classList.add('active');
+}
+function closeSettingsModal(){ document.getElementById('settingsModal').classList.remove('active'); }
+function saveSettingsFromModal(){
+  const s = {
+    ivaRate: parseFloat(document.getElementById('settingsIvaRate').value || '16') || 16,
+    applyIVA: document.getElementById('settingsApplyIVA').value === 'true',
+    validityDays: Math.max(0, parseInt(document.getElementById('settingsValidityDays').value || '30', 10))
+  };
+  try { localStorage.setItem('app_settings', JSON.stringify(s)); } catch {}
+  const applyEl = document.getElementById('applyIVA'); if (applyEl) applyEl.checked = s.applyIVA;
+  const rateEl = document.getElementById('ivaRate'); if (rateEl) rateEl.value = s.ivaRate;
+  recalc();
+  closeSettingsModal();
+}
+
+// =============
+// Clientes recientes
+// =============
+function openClientsModal(){ renderClientsTable(''); document.getElementById('clientsModal').classList.add('active'); }
+function closeClientsModal(){ document.getElementById('clientsModal').classList.remove('active'); }
+function renderClientsTable(query){
+  const q = (query||'').toLowerCase();
+  const tbody = document.getElementById('clientsTableBody');
+  const list = aggregateClients().filter(c => (c.name||'').toLowerCase().includes(q) || (c.phone||'').toLowerCase().includes(q) || (c.email||'').toLowerCase().includes(q));
+  tbody.innerHTML = '';
+  list.slice(0,50).forEach(c => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${c.name||''}</td><td>${c.phone||''}</td><td>${c.email||''}</td><td>${c.address||''}</td><td><button class="btn" data-pick="${encodeURIComponent(JSON.stringify(c))}">Elegir</button></td>`;
+    tbody.appendChild(tr);
+  });
+  tbody.onclick = (e)=>{
+    const btn = e.target.closest('button[data-pick]');
+    if (!btn) return;
+    const c = JSON.parse(decodeURIComponent(btn.getAttribute('data-pick')));
+    if (c.name) document.getElementById('clientName').textContent = c.name;
+    if (c.phone) document.getElementById('clientPhone').textContent = c.phone;
+    if (c.email) document.getElementById('clientEmail').textContent = c.email;
+    if (c.address) document.getElementById('clientAddress').textContent = c.address;
+    closeClientsModal();
+  };
+}
+function aggregateClients(){
+  const out = [];
+  try { (JSON.parse(localStorage.getItem('premium_receipts_ciaociao')||'[]')||[]).forEach(r => out.push(r.client||{})); } catch {}
+  try { (JSON.parse(localStorage.getItem('quotations_ciaociao')||'[]')||[]).forEach(r => out.push(r.client||{})); } catch {}
+  const seen = new Set();
+  const uniq = [];
+  out.forEach(c => {
+    const key = `${c.name||''}|${c.phone||''}|${c.email||''}|${c.address||''}`;
+    if (seen.has(key)) return; seen.add(key); uniq.push(c);
+  });
+  return uniq;
 }
