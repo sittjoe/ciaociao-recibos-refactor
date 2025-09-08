@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Verificación de Documento | ciaociao.mx</title>
+    <style>
+      :root { --bg:#0f0f14; --panel:#131622; --ink:#eaeaea; --muted:#9aa3b2; --ok:#22c55e; --bad:#ef4444; }
+      body{ margin:0; background: linear-gradient(180deg,#0b0d12,#151827); color:var(--ink); font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, sans-serif; }
+      .wrap{ max-width: 860px; margin: 40px auto; padding: 16px; }
+      .card{ background: linear-gradient(180deg,#151a28,#101420); border:1px solid rgba(255,255,255,.08); border-radius: 16px; padding: 20px; box-shadow: 0 12px 40px rgba(0,0,0,.35); }
+      .title{ display:flex; align-items:center; gap: 12px; margin: 0 0 10px; }
+      .title img{ width: 160px; height:auto; }
+      .status{ display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; font-size: 13px; }
+      .ok{ background: rgba(34,197,94,.15); color:#8ef0b3; border:1px solid rgba(34,197,94,.3); }
+      .bad{ background: rgba(239,68,68,.15); color:#ff9e9e; border:1px solid rgba(239,68,68,.3); }
+      .grid{ display:grid; grid-template-columns:1fr 1fr; gap: 14px; }
+      .field{ background: rgba(255,255,255,.02); border:1px solid rgba(255,255,255,.06); border-radius: 12px; padding: 12px; }
+      .label{ color: var(--muted); text-transform: uppercase; letter-spacing:.06em; font-size: 11px; }
+      .value{ font-weight: 600; font-size: 15px; }
+      .actions{ display:flex; gap:8px; margin-top: 12px; }
+      .btn{ padding:10px 12px; border-radius: 10px; border:1px solid rgba(255,255,255,.14); background:#1b2030; color:var(--ink); cursor:pointer; }
+      .muted{ color: var(--muted); font-size: 13px; }
+      .footer{ margin-top:16px; color: var(--muted); font-size: 12px; }
+      @media (max-width: 768px){ .grid{ grid-template-columns:1fr; }}
+    </style>
+  </head>
+  <body>
+    <script type="module" src="../src/common/security.js"></script>
+    <div class="wrap">
+      <div class="card">
+        <div class="title">
+          <img src="https://i.postimg.cc/FRC6PkXn/FINE-JEWELRY-85-x-54-mm-2000-x-1200-px.png" alt="ciaociao.mx" />
+          <div>
+            <h2 style="margin:0;">Verificación de Documento</h2>
+            <div id="statusBadge" class="status bad">Cargando…</div>
+          </div>
+        </div>
+        <p class="muted">Este verificador confirma que el código QR corresponde a un documento emitido por ciaociao.mx y no ha sido alterado.</p>
+        <div class="grid">
+          <div class="field"><div class="label">Tipo</div><div class="value" id="vType">-</div></div>
+          <div class="field"><div class="label">Folio</div><div class="value" id="vNumber">-</div></div>
+          <div class="field"><div class="label">Cliente</div><div class="value" id="vClient">-</div></div>
+          <div class="field"><div class="label">Fecha</div><div class="value" id="vDate">-</div></div>
+          <div class="field"><div class="label">Total</div><div class="value" id="vTotal">-</div></div>
+          <div class="field"><div class="label">ID</div><div class="value" id="vId" style="word-break:break-all;">-</div></div>
+        </div>
+        <div class="actions">
+          <button class="btn" id="copyUrl">Copiar URL</button>
+          <button class="btn" id="openHome">Ir al inicio</button>
+        </div>
+        <div class="footer">© <span id="year"></span> CIAO CIAO MX – Joyería Fina • info@ciaociao.mx</div>
+      </div>
+    </div>
+    <script type="module" src="../src/verify/verify.js"></script>
+  </body>
+  </html>
+

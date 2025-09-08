@@ -2,6 +2,7 @@ import { parseMoney, formatNumber, formatMoney, normalizeCurrencyText, normalize
 import { generateQuoteNumber, getCurrentQuoteId, setCurrentQuoteId } from './state.js';
 import { saveQuote, loadQuote, openHistory, closeHistory, searchHistory } from './history.js';
 import { searchTemplates } from '../common/templates.js';
+import { searchTemplates } from '../common/templates.js';
 
 const $ = (s, c = document) => c.querySelector(s);
 const $$ = (s, c = document) => Array.from(c.querySelectorAll(s));
@@ -474,6 +475,17 @@ function getQRText(){
 function updateQR(){
   const box = document.getElementById('qrBox');
   if (!box || typeof QRCode === 'undefined') return;
-  box.innerHTML = '';
-  try { new QRCode(box, { text: getQRText(), width: 100, height: 100, correctLevel: QRCode.CorrectLevel.M }); } catch {}
+  const payload = JSON.stringify({ t:'Q', n: $('#quoteNumber').textContent.trim(), c: $('#clientName').textContent.trim(), d: $('#issueDate').textContent.trim(), tot: $('#total').textContent.trim(), id: getCurrentQuoteId() || '' });
+  const p = b64url(payload);
+  sha256Hex(p + '.' + getSecret()).then(h => {
+    const parts = location.pathname.split('/'); parts.pop(); parts.pop();
+    const base = location.origin + (parts.join('/') || '');
+    const url = `${base}/verify/index.html?p=${p}&h=${h}`;
+    box.innerHTML = '';
+    try { new QRCode(box, { text: url, width: 100, height: 100, correctLevel: QRCode.CorrectLevel.M }); } catch {}
+  });
 }
+
+function b64url(str){ return btoa(unescape(encodeURIComponent(str))).replace(/=+$/,'').replace(/\+/g,'-').replace(/\//g,'_'); }
+async function sha256Hex(text){ const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)); return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join(''); }
+function getSecret(){ try { const s = localStorage.getItem('qr_secret'); if (s) return s; } catch{} return 'CCMX-QR-2025'; }

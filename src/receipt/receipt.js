@@ -706,18 +706,37 @@ function addRowFromTemplate(t){
 // =============
 // QR code
 // =============
-function getQRText(){
-  const num = $('#receiptNumber').textContent.trim();
-  const client = $('#clientName').textContent.trim();
-  const issue = $('#issueDate').textContent.trim();
-  const total = $('#total').textContent.trim();
-  return `CIAO CIAO MX\nRecibo ${num}\nCliente: ${client}\nFecha: ${issue}\nTotal: ${total}\nhttps://www.ciaociao.mx`;
+function base64url(str){
+  const b64 = btoa(unescape(encodeURIComponent(str))).replace(/=+$/,'').replace(/\+/g,'-').replace(/\//g,'_');
+  return b64;
 }
-function updateQR(){
+async function sha256Hex(text){
+  const enc = new TextEncoder();
+  const buf = await crypto.subtle.digest('SHA-256', enc.encode(text));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+function getQRPayload(){
+  return {
+    t: 'R',
+    n: $('#receiptNumber').textContent.trim(),
+    c: $('#clientName').textContent.trim(),
+    d: $('#issueDate').textContent.trim(),
+    tot: $('#total').textContent.trim(),
+    id: getCurrentReceiptId() || ''
+  };
+}
+function getQRSecret(){ try { const s = localStorage.getItem('qr_secret'); if (s) return s; } catch {} return 'CCMX-QR-2025'; }
+async function updateQR(){
   const box = document.getElementById('qrBox');
   if (!box || typeof QRCode === 'undefined') return;
+  const payload = JSON.stringify(getQRPayload());
+  const p = base64url(payload);
+  const h = await sha256Hex(p + '.' + getQRSecret());
+  const parts = location.pathname.split('/'); parts.pop(); parts.pop();
+  const base = location.origin + (parts.join('/') || '');
+  const url = `${base}/verify/index.html?p=${p}&h=${h}`;
   box.innerHTML = '';
-  try { new QRCode(box, { text: getQRText(), width: 100, height: 100, correctLevel: QRCode.CorrectLevel.M }); } catch {}
+  try { new QRCode(box, { text: url, width: 100, height: 100, correctLevel: QRCode.CorrectLevel.M }); } catch {}
 }
 
 // =============
