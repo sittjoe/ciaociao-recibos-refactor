@@ -11,6 +11,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.5/dist/purify.min.js"></script>
 
     <style>
       :root{ --bg:#f8f7f3; --paper:#fffdfa; --ink:#1f2937; --muted:#6b7280; --gold-1:#bfa36f; --gold-2:#d9c08c; --gold-3:#a98e5b; --line:#e7e3d9; --error:#dc2626; --success:#16a34a; }
@@ -44,6 +45,8 @@
       .items{ overflow:hidden; border:1px solid var(--line); border-radius:14px; background:var(--paper); }
       .items thead th{ font-size:12px; letter-spacing:.12em; color:var(--muted); text-transform:uppercase; text-align:left; background:linear-gradient(180deg,#fffdf6,#faf6eb); border-bottom:1px solid var(--line); padding:12px 14px; }
       .items tbody td{ padding:12px 14px; border-bottom:1px dashed #efe9dd; position:relative; }
+      .discount-tag{ display:none; margin-left:8px; font-size:11px; color:#dc2626; background:#fff3f3; border:1px solid #f5c2c2; border-radius:8px; padding:2px 6px; }
+      body.exporting .discount-tag{ display:inline-block; }
       .items tbody tr:last-child td{ border-bottom:none; }
       .items tbody tr:hover{ background:rgba(217,192,140,0.05); }
       .items tfoot td{ padding:12px 14px; }
@@ -331,6 +334,7 @@
               </div>
               <div class="sum-card" id="totales">
                 <div class="row"><div>Subtotal</div><div class="right" id="subtotal">0.00</div></div>
+                <div class="row"><div>Desc. líneas</div><div class="right" id="lineDiscTotal">0.00</div></div>
                 <div class="row"><div>Descuento</div><div class="right editable" contenteditable id="descuento">0.00</div></div>
                 <div class="row"><div>Aportación</div><div class="right editable" contenteditable id="aportacion">0.00</div></div>
                 <div class="row"><div>IVA (16%)</div><div class="right" id="iva">0.00</div></div>

@@ -22,6 +22,7 @@ function formatDate(date) {
 
 function recalc() {
   let subtotal = 0;
+  let lineDiscTotal = 0;
   $$('#tabla-items tbody tr').forEach(tr => {
     const qty = parseMoney($('.qty', tr)?.textContent);
     const unit = parseMoney($('.price', tr)?.textContent);
@@ -30,8 +31,16 @@ function recalc() {
     const net = Math.max(gross - disc, 0);
     $('.subtotal', tr).textContent = formatNumber(net);
     subtotal += net;
+    lineDiscTotal += disc;
+    const descCell = tr.querySelector('td');
+    if (descCell) {
+      let tag = descCell.querySelector('.discount-tag');
+      if (!tag) { tag = document.createElement('span'); tag.className = 'discount-tag'; descCell.appendChild(tag); }
+      tag.textContent = disc > 0 ? `-${formatNumber(disc)}` : '';
+    }
   });
   $('#subtotal').textContent = formatNumber(subtotal);
+  const ldt = document.getElementById('lineDiscTotalQ'); if (ldt) ldt.textContent = formatNumber(lineDiscTotal);
   const descuento = parseMoney($('#descuento')?.textContent);
   const base = Math.max(subtotal - descuento, 0);
   const applyIVA = document.getElementById('applyIVA')?.checked ?? true;
@@ -282,6 +291,9 @@ function bindUI() {
   document.addEventListener('focusout', e => {
     const t = e.target;
     if (!(t instanceof HTMLElement)) return;
+    if (t.matches('[contenteditable]') && !t.classList.contains('qty') && !t.classList.contains('price') && !t.classList.contains('line-discount') && t.id !== 'descuento') {
+      if (window.DOMPurify) t.textContent = DOMPurify.sanitize(t.textContent || '', {ALLOWED_TAGS: []});
+    }
     if (t.matches('.qty')) { t.textContent = normalizeIntegerText(t.textContent || '1', { min: 1 }); recalc(); }
     if (t.matches('.price')) { t.textContent = normalizeCurrencyText(t.textContent || '0', { min: 0 }); recalc(); }
     if (t.id === 'descuento') { t.textContent = normalizeCurrencyText(t.textContent || '0', { min: 0 }); recalc(); }
