@@ -1,4 +1,5 @@
 const STORAGE_KEY = 'quotations_ciaociao';
+let sortDir = localStorage.getItem('quotes_sort_dir') || 'desc';
 
 export function listQuotes() {
   return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
@@ -20,10 +21,20 @@ export function deleteQuote(id) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
 }
 
+function sortByDate(arr){
+  const copy = arr.slice();
+  copy.sort((a,b)=>{
+    const da = new Date(a?.dates?.issue || a?.date || 0).getTime();
+    const db = new Date(b?.dates?.issue || b?.date || 0).getTime();
+    return sortDir === 'asc' ? da - db : db - da;
+  });
+  return copy;
+}
+
 export function renderHistoryTable(onLoad) {
   const tbody = document.getElementById('historyTableBody');
   tbody.innerHTML = '';
-  listQuotes().slice().reverse().forEach(q => {
+  sortByDate(listQuotes()).forEach(q => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${q.number}</td>
@@ -46,12 +57,23 @@ export function renderHistoryTable(onLoad) {
     if (action === 'load') onLoad(id);
     if (action === 'delete') { deleteQuote(id); renderHistoryTable(onLoad); }
   }, { once: true });
+
+  const sortTh = document.getElementById('quoteHistorySortDate');
+  const dirSpan = document.getElementById('quoteHistorySortDateDir');
+  if (dirSpan) dirSpan.textContent = sortDir === 'asc' ? '↑' : '↓';
+  if (sortTh) {
+    sortTh.onclick = () => {
+      sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+      localStorage.setItem('quotes_sort_dir', sortDir);
+      renderHistoryTable(onLoad);
+    };
+  }
 }
 
 export function searchHistory(query) {
   const q = String(query || '').toLowerCase();
   const tbody = document.getElementById('historyTableBody');
-  const filtered = listQuotes().filter(x => (x.number || '').toLowerCase().includes(q)
+  const filtered = sortByDate(listQuotes()).filter(x => (x.number || '').toLowerCase().includes(q)
     || (x.client?.name || '').toLowerCase().includes(q)
     || (x.dates?.issue || '').toLowerCase().includes(q));
   tbody.innerHTML = '';
@@ -79,4 +101,3 @@ export function openHistory(onLoad) {
 export function closeHistory() {
   document.getElementById('historyModal').classList.remove('active');
 }
-

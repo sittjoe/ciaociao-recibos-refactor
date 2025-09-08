@@ -1,4 +1,4 @@
-import { parseMoney, formatNumber, formatMoney } from './money.js';
+import { parseMoney, formatNumber, formatMoney, normalizeCurrencyText, normalizeIntegerText } from './money.js';
 import { generateReceiptNumber, getCurrentReceiptId, setCurrentReceiptId, getSignatures, setSignature, clearSignature as clearSigState, resetSignatures } from './state.js';
 import { initSignature, openSignatureModal, closeSignatureModal, clearModalSignature, saveSignatureToTarget, clearSignature } from './signature.js';
 import { saveReceipt, loadReceipt, openHistory, closeHistory, searchHistory } from './history.js';
@@ -296,6 +296,14 @@ function bindUI() {
   });
 
   document.addEventListener('input', e => { if (e.target.matches('[contenteditable]') || e.target.matches('select')) recalc(); });
+  // Formateo automático en blur para celdas numéricas
+  document.addEventListener('focusout', e => {
+    const t = e.target;
+    if (!(t instanceof HTMLElement)) return;
+    if (t.matches('.qty')) { t.textContent = normalizeIntegerText(t.textContent || '1', { min: 1 }); recalc(); }
+    if (t.matches('.price')) { t.textContent = normalizeCurrencyText(t.textContent || '0', { min: 0 }); recalc(); }
+    if (t.id === 'descuento' || t.id === 'aportacion' || t.id === 'anticipo') { t.textContent = normalizeCurrencyText(t.textContent || '0', { min: 0 }); recalc(); }
+  });
   document.addEventListener('keydown', e => {
     if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); saveReceiptAction(); }
     if ((e.ctrlKey || e.metaKey) && e.key === 'n') { e.preventDefault(); newReceipt(); }

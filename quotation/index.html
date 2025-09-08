@@ -80,15 +80,15 @@
           <input type="text" id="searchHistory" placeholder="Buscar por cliente, número o fecha..." style="width: 100%; padding: 10px; border: 1px solid #e5e5e5; border-radius: 8px;" />
         </div>
         <table class="history-table">
-          <thead>
-            <tr>
-              <th>Número</th>
-              <th>Fecha</th>
-              <th>Cliente</th>
-              <th>Total</th>
-              <th>Estatus</th>
-              <th>Acciones</th>
-            </tr>
+        <thead>
+          <tr>
+            <th>Número</th>
+            <th id="quoteHistorySortDate" style="cursor:pointer; user-select:none;">Fecha <span id="quoteHistorySortDateDir">↓</span></th>
+            <th>Cliente</th>
+            <th>Total</th>
+            <th>Estatus</th>
+            <th>Acciones</th>
+          </tr>
           </thead>
           <tbody id="historyTableBody"></tbody>
         </table>

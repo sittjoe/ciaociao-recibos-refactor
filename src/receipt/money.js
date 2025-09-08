@@ -11,3 +11,17 @@ export function formatMoney(n) {
   return '$' + formatNumber(n);
 }
 
+// Normalizadores útiles para contentEditable/inputs
+export function normalizeCurrencyText(text, { min = 0 } = {}) {
+  const num = parseMoney(text);
+  const clamped = Math.max(min, isFinite(num) ? num : 0);
+  return formatNumber(clamped);
+}
+
+export function normalizeIntegerText(text, { min = 0 } = {}) {
+  const only = String(text).replace(/[^0-9-]/g, '');
+  let v = parseInt(only || '0', 10);
+  if (!isFinite(v)) v = 0;
+  if (typeof min === 'number') v = Math.max(min, v);
+  return String(v);
+}

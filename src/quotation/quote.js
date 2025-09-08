@@ -1,4 +1,4 @@
-import { parseMoney, formatNumber, formatMoney } from '../receipt/money.js';
+import { parseMoney, formatNumber, formatMoney, normalizeCurrencyText, normalizeIntegerText } from '../receipt/money.js';
 import { generateQuoteNumber, getCurrentQuoteId, setCurrentQuoteId } from './state.js';
 import { saveQuote, loadQuote, openHistory, closeHistory, searchHistory } from './history.js';
 
@@ -210,6 +210,14 @@ function bindUI() {
   });
 
   document.addEventListener('input', e => { if (e.target.matches('[contenteditable]')) recalc(); });
+  // Formateo automático: qty (int), price y descuento (2 decimales)
+  document.addEventListener('focusout', e => {
+    const t = e.target;
+    if (!(t instanceof HTMLElement)) return;
+    if (t.matches('.qty')) { t.textContent = normalizeIntegerText(t.textContent || '1', { min: 1 }); recalc(); }
+    if (t.matches('.price')) { t.textContent = normalizeCurrencyText(t.textContent || '0', { min: 0 }); recalc(); }
+    if (t.id === 'descuento') { t.textContent = normalizeCurrencyText(t.textContent || '0', { min: 0 }); recalc(); }
+  });
   document.addEventListener('keydown', e => {
     if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); saveQuoteAction(); }
     if ((e.ctrlKey || e.metaKey) && e.key === 'n') { e.preventDefault(); newQuote(); }
