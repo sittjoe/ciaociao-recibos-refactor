@@ -25,9 +25,11 @@ function recalc() {
   $$('#tabla-items tbody tr').forEach(tr => {
     const qty = parseMoney($('.qty', tr)?.textContent);
     const unit = parseMoney($('.price', tr)?.textContent);
-    const imp = (qty * unit) || 0;
-    $('.subtotal', tr).textContent = formatNumber(imp);
-    subtotal += imp;
+    const gross = (qty * unit) || 0;
+    const disc = parseLineDiscount($('.line-discount', tr)?.textContent || '0', gross);
+    const net = Math.max(gross - disc, 0);
+    $('.subtotal', tr).textContent = formatNumber(net);
+    subtotal += net;
   });
   $('#subtotal').textContent = formatNumber(subtotal);
   const descuento = parseMoney($('#descuento')?.textContent);
@@ -37,6 +39,18 @@ function recalc() {
   const iva = applyIVA ? base * (ivaRate / 100) : 0;
   $('#iva').textContent = formatNumber(iva);
   $('#total').textContent = formatMoney(base + iva);
+}
+
+function parseLineDiscount(text, base){
+  const t = String(text).trim();
+  if (!t) return 0;
+  if (/%$/.test(t)) {
+    const p = parseFloat(t.replace(/[^0-9.\-]/g,'')) || 0;
+    const pct = Math.min(Math.max(p, 0), 100);
+    return base * (pct/100);
+  }
+  const val = parseMoney(t);
+  return Math.min(Math.max(val, 0), base);
 }
 
 function addRow() {
@@ -120,6 +134,7 @@ function loadQuoteAction(id) {
       <td class="editable" contenteditable>${it.description}</td>
       <td class="center editable qty" contenteditable>${it.qty}</td>
       <td class="right editable price" contenteditable>${it.price}</td>
+      <td class="right editable line-discount" contenteditable>${it.discount || '0'}</td>
       <td class="right subtotal">${it.subtotal}</td>
       <td class="center editable" contenteditable>${it.sku}</td>
       <td style="position:relative;"><span class="delete-row" data-action="delete-row">×</span></td>`;
@@ -270,6 +285,16 @@ function bindUI() {
     if (t.matches('.qty')) { t.textContent = normalizeIntegerText(t.textContent || '1', { min: 1 }); recalc(); }
     if (t.matches('.price')) { t.textContent = normalizeCurrencyText(t.textContent || '0', { min: 0 }); recalc(); }
     if (t.id === 'descuento') { t.textContent = normalizeCurrencyText(t.textContent || '0', { min: 0 }); recalc(); }
+    if (t.matches('.line-discount')) {
+      const raw = (t.textContent||'').trim();
+      if (/%$/.test(raw)) {
+        const p = Math.min(Math.max(parseFloat(raw.replace(/[^0-9.\-]/g,'')||'0'),0),100);
+        t.textContent = `${p}%`;
+      } else {
+        t.textContent = normalizeCurrencyText(raw||'0', { min: 0 });
+      }
+      recalc();
+    }
   });
   document.addEventListener('keydown', e => {
     if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); saveQuoteAction(); }

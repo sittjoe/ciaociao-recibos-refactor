@@ -25,9 +25,11 @@ function recalc() {
   $$('#tabla-items tbody tr').forEach(tr => {
     const qty = parseMoney($('.qty', tr)?.textContent);
     const unit = parseMoney($('.price', tr)?.textContent);
-    const imp = (qty * unit) || 0;
-    $('.subtotal', tr).textContent = formatNumber(imp);
-    subtotal += imp;
+    const gross = (qty * unit) || 0;
+    const disc = parseLineDiscount($('.line-discount', tr)?.textContent || '0', gross);
+    const net = Math.max(gross - disc, 0);
+    $('.subtotal', tr).textContent = formatNumber(net);
+    subtotal += net;
   });
   $('#subtotal').textContent = formatNumber(subtotal);
 
@@ -65,12 +67,25 @@ function recalc() {
   if (msSaldo) msSaldo.textContent = $('#saldo').textContent;
 }
 
+function parseLineDiscount(text, base){
+  const t = String(text).trim();
+  if (!t) return 0;
+  if (/%$/.test(t)) {
+    const p = parseFloat(t.replace(/[^0-9.\-]/g,'')) || 0;
+    const pct = Math.min(Math.max(p, 0), 100);
+    return base * (pct/100);
+  }
+  const val = parseMoney(t);
+  return Math.min(Math.max(val, 0), base);
+}
+
 function addRow() {
   const tr = document.createElement('tr');
   tr.innerHTML = `
     <td class="editable" contenteditable>Artículo de joyería</td>
     <td class="center editable qty" contenteditable>1</td>
     <td class="right editable price" contenteditable>0.00</td>
+    <td class="right editable line-discount" contenteditable>0</td>
     <td class="right subtotal">0.00</td>
     <td class="center editable" contenteditable>—</td>
     <td class="center">
@@ -116,8 +131,9 @@ function collectReceiptData() {
         description: cells[0]?.textContent || '',
         qty: cells[1]?.textContent || '',
         price: cells[2]?.textContent || '',
-        subtotal: cells[3]?.textContent || '',
-        sku: cells[4]?.textContent || '',
+        discount: cells[3]?.textContent || '0',
+        subtotal: cells[4]?.textContent || '',
+        sku: cells[5]?.textContent || '',
         type: $('.item-type', tr)?.value || 'producto',
       };
     }),
@@ -164,6 +180,7 @@ function loadReceiptAction(id) {
       <td class="editable" contenteditable>${it.description}</td>
       <td class="center editable qty" contenteditable>${it.qty}</td>
       <td class="right editable price" contenteditable>${it.price}</td>
+      <td class="right editable line-discount" contenteditable>${it.discount || '0'}</td>
       <td class="right subtotal">${it.subtotal}</td>
       <td class="center editable" contenteditable>${it.sku}</td>
       <td class="center">
@@ -441,6 +458,16 @@ function bindUI() {
     if (!(t instanceof HTMLElement)) return;
     if (t.matches('.qty')) { t.textContent = normalizeIntegerText(t.textContent || '1', { min: 1 }); recalc(); }
     if (t.matches('.price')) { t.textContent = normalizeCurrencyText(t.textContent || '0', { min: 0 }); recalc(); }
+    if (t.matches('.line-discount')) {
+      const raw = (t.textContent||'').trim();
+      if (/%$/.test(raw)) {
+        const p = Math.min(Math.max(parseFloat(raw.replace(/[^0-9.\-]/g,'')||'0'),0),100);
+        t.textContent = `${p}%`;
+      } else {
+        t.textContent = normalizeCurrencyText(raw||'0', { min: 0 });
+      }
+      recalc();
+    }
     if (t.id === 'descuento' || t.id === 'aportacion' || t.id === 'anticipo') { t.textContent = normalizeCurrencyText(t.textContent || '0', { min: 0 }); recalc(); }
   });
   document.addEventListener('keydown', e => {
