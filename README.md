@@ -30,6 +30,13 @@ Scripts útiles
 - `npm run lint`   Revisión rápida con ESLint (no bloqueante)
 - `npm run format` Formatea con Prettier
 
+Despliegue en GitHub Pages (sin Actions)
+- En GitHub → Settings → Pages
+- Build and deployment → Source: "Deploy from a branch"
+- Branch: `main` y Folder: `/ (root)` → Save
+- Espera 1–2 min y abre la URL indicada (normalmente:
+  `https://<tu-usuario>.github.io/ciaociao-recibos-refactor/`)
+
 Notas
 - Guardado local con `localStorage` (sin backend requerido).
 - Generación de PDF usando `html2canvas` + `jsPDF` vía CDN.
