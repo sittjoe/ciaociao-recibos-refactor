@@ -171,6 +171,7 @@
     <div class="sheet">
       <div class="gilded-frame">
         <div id="qrBox" style="position:absolute; right:16px; bottom:16px; width:110px; height:110px; background:#fff; border:1px solid var(--line); border-radius:8px; display:flex; align-items:center; justify-content:center;"></div>
+        <button id="copyQrLinkQ" class="btn" style="position:absolute; right:16px; bottom:132px; padding:6px 8px; font-size:12px;">Copiar enlace</button>
         <header class="header">
           <div class="brand">
             <img alt="CIAO CIAO MX – Joyería Fina" src="../assets/logo.png" />
@@ -244,7 +245,7 @@
                   <input type="checkbox" id="applyIVA" style="margin-left:6px;" checked />
                 </label>
                 <label style="font-size:12px; color:var(--muted);">IVA (%)
-                  <input type="number" id="ivaRate" value="16" min="0" max="100" step="0.1" style="width:70px; margin-left:6px; padding:6px 8px; border:1px solid var(--line); border-radius:8px;" />
+                  <input type="number" inputmode="decimal" id="ivaRate" value="16" min="0" max="100" step="0.1" style="width:70px; margin-left:6px; padding:6px 8px; border:1px solid var(--line); border-radius:8px;" />
                 </label>
               </div>
             <div class="sum-card" id="totales">
@@ -301,7 +302,7 @@
         <h3>Ajustes</h3>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
           <label class="form-label">IVA por defecto (%)
-            <input id="settingsIvaRate" type="number" min="0" max="100" step="0.1" style="width:100%; padding:10px; border:1px solid #e5e5e5; border-radius:8px;" />
+            <input id="settingsIvaRate" type="number" inputmode="decimal" min="0" max="100" step="0.1" style="width:100%; padding:10px; border:1px solid #e5e5e5; border-radius:8px;" />
           </label>
           <label class="form-label">Aplicar IVA por defecto
             <select id="settingsApplyIVA" style="width:100%; padding:10px; border:1px solid #e5e5e5; border-radius:8px;">
@@ -337,6 +338,7 @@
           <div>
             <button class="btn" id="closeSettingsModal" type="button" onclick="(function(){var m=document.getElementById('settingsModal'); if(m){m.classList.remove('active'); document.body.classList.remove('modal-open');}})()">Cancelar</button>
             <button class="btn success" id="saveSettingsModal" type="button">Guardar</button>
+            <button class="btn" id="resetSettingsModalQ" type="button">Restaurar</button>
           </div>
         </div>
       </div>

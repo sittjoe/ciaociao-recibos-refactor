@@ -215,10 +215,10 @@
             <input id="formItemSku" type="text" placeholder="SKU/Código" style="width:100%; padding:10px; border:1px solid #e5e5e5; border-radius:8px;" />
           </label>
           <label>Cantidad
-            <input id="formItemQty" type="number" step="1" min="1" value="1" style="width:100%; padding:10px; border:1px solid #e5e5e5; border-radius:8px;" />
+            <input id="formItemQty" type="number" inputmode="numeric" step="1" min="1" value="1" style="width:100%; padding:10px; border:1px solid #e5e5e5; border-radius:8px;" />
           </label>
           <label>Precio unitario
-            <input id="formItemPrice" type="number" step="0.01" value="0.00" style="width:100%; padding:10px; border:1px solid #e5e5e5; border-radius:8px;" />
+            <input id="formItemPrice" type="number" inputmode="decimal" step="0.01" value="0.00" style="width:100%; padding:10px; border:1px solid #e5e5e5; border-radius:8px;" />
           </label>
           <label>Tipo
             <select id="formItemType" style="width:100%; padding:10px; border:1px solid #e5e5e5; border-radius:8px;">
@@ -239,6 +239,7 @@
       <div class="watermark">CIAO CIAO MX</div>
       <div class="gilded-frame">
         <div id="qrBox" class="qr-box"></div>
+        <button id="copyQrLink" class="btn" style="position:absolute; right:16px; bottom:132px; padding:6px 8px; font-size:12px;">Copiar enlace</button>
         <header class="header">
           <div class="brand">
             <img alt="CIAO CIAO MX – Joyería Fina" src="../assets/logo.png" />
@@ -339,7 +340,7 @@
                   <input type="checkbox" id="applyIVA" style="margin-left:6px;" checked />
                 </label>
                 <label style="font-size:12px; color:var(--muted);">IVA (%)
-                  <input type="number" id="ivaRate" value="16" min="0" max="100" step="0.1" style="width:70px; margin-left:6px; padding:6px 8px; border:1px solid var(--line); border-radius:8px;" />
+                  <input type="number" inputmode="decimal" id="ivaRate" value="16" min="0" max="100" step="0.1" style="width:70px; margin-left:6px; padding:6px 8px; border:1px solid var(--line); border-radius:8px;" />
                 </label>
               </div>
               <div class="sum-card" id="totales">
@@ -524,6 +525,7 @@
           <div>
             <button class="btn" id="closeSettingsModal" type="button" onclick="(function(){var m=document.getElementById('settingsModal'); if(m){m.classList.remove('active'); document.body.classList.remove('modal-open');}})()">Cancelar</button>
             <button class="btn success" id="saveSettingsModal">Guardar</button>
+            <button class="btn" id="resetSettingsModal" type="button">Restaurar</button>
           </div>
         </div>
       </div>

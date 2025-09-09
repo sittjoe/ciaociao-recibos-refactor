@@ -263,6 +263,15 @@ function bindUI() {
   $('#convert-to-receipt').addEventListener('click', convertToReceipt);
   const qr = document.getElementById('qrBox');
   if (qr) qr.addEventListener('click', ()=>{ if (qr.dataset.url) window.open(qr.dataset.url, '_blank'); });
+  const copyQrBtnQ = document.getElementById('copyQrLinkQ');
+  if (copyQrBtnQ) copyQrBtnQ.addEventListener('click', async () => {
+    try {
+      if (!document.getElementById('qrBox').dataset.url) updateQR();
+      const url = document.getElementById('qrBox').dataset.url || '';
+      await navigator.clipboard.writeText(url);
+      showNotification('Enlace copiado','success');
+    } catch { showNotification('No se pudo copiar','error'); }
+  });
   const openTplBtn = document.getElementById('open-templates');
   if (openTplBtn) openTplBtn.addEventListener('click', openTemplatesModal);
   const closeTplBtn = document.getElementById('closeTemplatesModal');
@@ -276,6 +285,17 @@ function bindUI() {
   if (closeSettingsBtn) closeSettingsBtn.addEventListener('click', closeSettingsModal);
   const saveSettingsBtn = document.getElementById('saveSettingsModal');
   if (saveSettingsBtn) saveSettingsBtn.addEventListener('click', saveSettingsFromModal);
+  const resetBtnQ = document.getElementById('resetSettingsModalQ');
+  if (resetBtnQ) resetBtnQ.addEventListener('click', () => {
+    try {
+      document.getElementById('settingsIvaRate').value = 16;
+      document.getElementById('settingsApplyIVA').value = 'true';
+      document.getElementById('settingsValidityDays').value = 30;
+      document.getElementById('settingsTemplate').value = 'premium';
+      document.getElementById('settingsPdfFormat').value = 'letter';
+      document.getElementById('settingsVerifyBase').value = '';
+    } catch {}
+  });
   // Export/Import data (local)
   const expBtnQ = document.getElementById('exportDataQ');
   const impInputQ = document.getElementById('importDataInputQ');
@@ -336,6 +356,8 @@ function bindUI() {
   $('#closeDataModal').addEventListener('click', closeDataModal);
   $('#saveDataModal').addEventListener('click', saveDataFromModal);
 
+  // Undo for row delete
+  let lastDeleted = null;
   document.body.addEventListener('click', e => {
     const del = e.target.closest('[data-action="delete-row"]');
     if (del) {
@@ -351,6 +373,34 @@ function bindUI() {
       if (action === 'row-dup' && tr && tbody) { const clone = tr.cloneNode(true); tbody.insertBefore(clone, tr.nextSibling); recalc(); }
       if (action === 'row-up' && tr && tbody) { const prev = tr.previousElementSibling; if (prev) tbody.insertBefore(tr, prev); recalc(); }
       if (action === 'row-down' && tr && tbody) { const next = tr.nextElementSibling; if (next) tbody.insertBefore(next, tr); recalc(); }
+      if (action === 'delete-row' && tr && tbody) {
+        if (tbody.children.length > 1) {
+          const idx = Array.prototype.indexOf.call(tbody.children, tr);
+          const clone = tr.cloneNode(true);
+          tr.remove();
+          recalc();
+          lastDeleted = { tbody, clone, idx };
+          const notification = document.getElementById('notification');
+          const msgEl = document.getElementById('notification-message');
+          if (notification && msgEl) {
+            msgEl.textContent = 'Producto eliminado';
+            let btn = notification.querySelector('button._action'); if (btn) btn.remove();
+            btn = document.createElement('button'); btn.className = '_action'; btn.textContent = 'Deshacer';
+            btn.style.marginLeft = '10px'; btn.style.border='none'; btn.style.background='#fff'; btn.style.color='#111'; btn.style.borderRadius='8px'; btn.style.padding='4px 8px'; btn.style.cursor='pointer';
+            btn.addEventListener('click', ()=>{
+              const children = tbody.children;
+              if (lastDeleted) {
+                if (lastDeleted.idx >= 0 && lastDeleted.idx < children.length) tbody.insertBefore(clone, children[lastDeleted.idx]); else tbody.appendChild(clone);
+                lastDeleted = null; recalc();
+              }
+              notification.classList.remove('show'); btn.remove();
+            });
+            notification.appendChild(btn);
+            notification.className = 'notification info show';
+            setTimeout(()=>{ notification.classList.remove('show'); try{btn.remove();}catch{} }, 5000);
+          }
+        }
+      }
     }
     // Fallback: open modals via delegation too
     if (e.target.closest('#openSettings')) { e.preventDefault(); openSettingsModal(); }

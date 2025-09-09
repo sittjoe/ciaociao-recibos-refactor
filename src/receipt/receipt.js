@@ -7,6 +7,37 @@ import { getTemplates, searchTemplates } from '../common/templates.js';
 const $ = (s, c = document) => c.querySelector(s);
 const $$ = (s, c = document) => Array.from(c.querySelectorAll(s));
 
+// Action notifications (with optional undo)
+let lastActionCleanup = null;
+function showActionNotification(message, { actionLabel, onAction, type = 'success', duration = 4000 } = {}) {
+  const notification = $('#notification');
+  const messageEl = $('#notification-message');
+  if (!notification || !messageEl) return;
+  // Clean previous
+  if (lastActionCleanup) { try { lastActionCleanup(); } catch {} lastActionCleanup = null; }
+  // Render message + optional action button
+  messageEl.textContent = message;
+  let btn = notification.querySelector('button._action');
+  if (btn) btn.remove();
+  if (actionLabel && typeof onAction === 'function') {
+    btn = document.createElement('button');
+    btn.className = '_action';
+    btn.textContent = actionLabel;
+    btn.style.marginLeft = '10px';
+    btn.style.border = 'none';
+    btn.style.background = '#fff';
+    btn.style.color = '#111';
+    btn.style.borderRadius = '8px';
+    btn.style.padding = '4px 8px';
+    btn.style.cursor = 'pointer';
+    btn.addEventListener('click', () => { try { onAction(); } finally { notification.classList.remove('show'); } });
+    notification.appendChild(btn);
+  }
+  notification.className = `notification ${type} show`;
+  const to = setTimeout(() => notification.classList.remove('show'), duration);
+  lastActionCleanup = () => { clearTimeout(to); if (btn) btn.remove(); };
+}
+
 function showNotification(message, type = 'success') {
   const notification = $('#notification');
   const messageEl = $('#notification-message');
@@ -400,6 +431,15 @@ function bindUI() {
   // QR clickable
   const qr = document.getElementById('qrBox');
   if (qr) qr.addEventListener('click', ()=>{ if (qr.dataset.url) window.open(qr.dataset.url, '_blank'); });
+  const copyQrBtn = document.getElementById('copyQrLink');
+  if (copyQrBtn) copyQrBtn.addEventListener('click', async () => {
+    try {
+      if (!document.getElementById('qrBox').dataset.url) await updateQR();
+      const url = document.getElementById('qrBox').dataset.url || '';
+      await navigator.clipboard.writeText(url);
+      showNotification('Enlace copiado', 'success');
+    } catch { showNotification('No se pudo copiar', 'error'); }
+  });
   // Datos modal
   $('#edit-data').addEventListener('click', openDataModal);
   $('#closeDataModal').addEventListener('click', closeDataModal);
@@ -438,11 +478,32 @@ function bindUI() {
   const saveSettingsBtn = document.getElementById('saveSettingsModal');
   if (saveSettingsBtn) saveSettingsBtn.addEventListener('click', saveSettingsFromModal);
 
+  // Support Undo on delete
+  let lastDeleted = null;
+
   document.body.addEventListener('click', e => {
     const del = e.target.closest('[data-action="delete-row"]');
     if (del) {
       const tr = del.closest('tr');
-      const tbody = tr?.parentElement; if (tbody && tbody.children.length > 1) { tr.remove(); recalc(); showNotification('Producto eliminado','success'); }
+      const tbody = tr?.parentElement;
+      if (tbody && tbody.children.length > 1) {
+        // capture index and node
+        const idx = Array.prototype.indexOf.call(tbody.children, tr);
+        const clone = tr.cloneNode(true);
+        tr.remove();
+        recalc();
+        lastDeleted = { tbody, clone, idx };
+        showActionNotification('Producto eliminado', {
+          actionLabel: 'Deshacer',
+          onAction: () => {
+            const children = tbody.children;
+            if (idx >= 0 && idx < children.length) tbody.insertBefore(clone, children[idx]); else tbody.appendChild(clone);
+            recalc();
+            lastDeleted = null;
+          },
+          type: 'info', duration: 5000
+        });
+      }
       else showNotification('Debe mantener al menos un producto','error');
     }
     const actBtn = e.target.closest('[data-action]');
@@ -536,6 +597,20 @@ function bindUI() {
   const applyIvaInput = document.getElementById('applyIVA');
   if (ivaRateInput) ivaRateInput.addEventListener('input', () => recalc());
   if (applyIvaInput) applyIvaInput.addEventListener('change', () => recalc());
+  // Reset defaults in settings
+  const resetBtn = document.getElementById('resetSettingsModal');
+  if (resetBtn) resetBtn.addEventListener('click', () => {
+    try {
+      document.getElementById('settingsIvaRate').value = 16;
+      document.getElementById('settingsApplyIVA').value = 'true';
+      document.getElementById('settingsValidityDays').value = 30;
+      document.getElementById('settingsTemplate').value = 'premium';
+      document.getElementById('settingsPdfFormat').value = 'letter';
+      document.getElementById('settingsVerifyBase').value = '';
+      document.getElementById('settingsLineRound').value = 'none';
+      document.getElementById('settingsTotalRound').value = 'none';
+    } catch {}
+  });
 }
 
 function openTicketPreview(){
@@ -569,6 +644,14 @@ function init() {
   initSignature(document.getElementById('signatureCanvas'));
   recalc();
   setInterval(() => { if ($('#receiptNumber').textContent !== '---') saveReceiptAction(); }, 30000);
+
+  // Warn on unsaved changes
+  let dirty = false;
+  document.addEventListener('input', () => { dirty = true; }, { capture: true });
+  const markSaved = () => { dirty = false; };
+  const _save = saveReceiptAction;
+  saveReceiptAction = function(){ _save(); markSaved(); };
+  window.addEventListener('beforeunload', (e) => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
 }
 
 document.addEventListener('DOMContentLoaded', () => { bindUI(); init(); });
