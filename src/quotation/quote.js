@@ -219,8 +219,8 @@ function shareWhatsApp() {
       const p = b64url(payload);
       const h = await sha256Hex(p + '.' + getSecret());
       const settings = JSON.parse(localStorage.getItem('app_settings')||'{}');
-      let base = settings.verifyBase || '';
-      if (!base) { const parts = location.pathname.split('/'); parts.pop(); parts.pop(); base = location.origin + (parts.join('/') || ''); }
+      let base = settings.verifyBase || 'https://sittjoe.github.io/ciaociao-recibos-refactor';
+      if (!/^https?:\/\//i.test(base)) { const parts = location.pathname.split('/'); parts.pop(); parts.pop(); base = location.origin + (parts.join('/') || ''); }
       const verifyUrl = `${base}/verify/index.html?p=${p}&h=${h}`;
       msg += `\nVerificar: ${verifyUrl}`;
     } catch {}
@@ -714,8 +714,8 @@ function updateQR(){
   const p = b64url(payload);
   sha256Hex(p + '.' + getSecret()).then(h => {
     const settings = JSON.parse(localStorage.getItem('app_settings')||'{}');
-    let base = settings.verifyBase || '';
-    if (!base) { const parts = location.pathname.split('/'); parts.pop(); parts.pop(); base = location.origin + (parts.join('/') || ''); }
+    let base = settings.verifyBase || 'https://sittjoe.github.io/ciaociao-recibos-refactor';
+    if (!/^https?:\/\//i.test(base)) { const parts = location.pathname.split('/'); parts.pop(); parts.pop(); base = location.origin + (parts.join('/') || ''); }
     const url = `${base}/verify/index.html?p=${p}&h=${h}`;
     box.innerHTML = '';
     try { new QRCode(box, { text: url, width: 100, height: 100, correctLevel: QRCode.CorrectLevel.M }); } catch {}

@@ -60,10 +60,10 @@ async function main(){
   });
   document.getElementById('openHome').addEventListener('click', ()=>{
     const parts = location.pathname.split('/'); parts.pop(); parts.pop();
-    const base = location.origin + (parts.join('/') || '');
+    let base = location.origin + (parts.join('/') || '');
+    if (!base) base = 'https://sittjoe.github.io/ciaociao-recibos-refactor';
     window.location.href = base + '/index.html';
   });
 }
 
 main();
-
