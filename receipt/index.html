@@ -95,6 +95,8 @@
       .is-invalid{ border-color: var(--error) !important; box-shadow: 0 0 0 2px rgba(220,38,38,0.08); }
       @media print{ body{ background:#fff; } .sheet{ margin:0; box-shadow:none; padding:0; } .actions, .watermark, .delete-row, .clear-sig, .btn-back{ display:none !important; } [contenteditable]{ background:transparent !important; padding:0 !important; margin:0 !important; } }
       @media (max-width:768px){ .btn-back{ position:static; margin-bottom:20px; } .header{ grid-template-columns:1fr; text-align:center; gap:16px; } .meta{ border-left:none; border-top:1px solid var(--line); padding:16px 0 0 0; justify-self:center; } .two-col{ grid-template-columns:1fr; } .totals{ grid-template-columns:1fr; } .signatures{ grid-template-columns:1fr; } .actions{ flex-direction:column; } .actions-left,.actions-right{ width:100%; justify-content:center; } }
+      /* While any modal is open, prevent fixed bars from catching clicks */
+      body.modal-open .mobile-actions, body.modal-open .mobile-summary { pointer-events: none; }
       /* Mobile floating summary + fixed actions */
       @media (max-width: 768px) {
         .sheet{ margin:16px auto; padding:16px; padding-bottom:120px; }

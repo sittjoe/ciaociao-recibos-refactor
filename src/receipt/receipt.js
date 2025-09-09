@@ -915,8 +915,9 @@ function openSettingsModal(){
     }
   } catch {}
   document.getElementById('settingsModal').classList.add('active');
+  document.body.classList.add('modal-open');
 }
-function closeSettingsModal(){ document.getElementById('settingsModal').classList.remove('active'); }
+function closeSettingsModal(){ document.getElementById('settingsModal').classList.remove('active'); document.body.classList.remove('modal-open'); }
 function saveSettingsFromModal(){
   const s = {
     ivaRate: parseFloat(document.getElementById('settingsIvaRate').value || '16') || 16,
@@ -970,8 +971,8 @@ document.addEventListener('DOMContentLoaded', () => {
 // =============
 // Clientes recientes
 // =============
-function openClientsModal(){ renderClientsTable(''); document.getElementById('clientsModal').classList.add('active'); }
-function closeClientsModal(){ document.getElementById('clientsModal').classList.remove('active'); }
+function openClientsModal(){ renderClientsTable(''); document.getElementById('clientsModal').classList.add('active'); document.body.classList.add('modal-open'); }
+function closeClientsModal(){ document.getElementById('clientsModal').classList.remove('active'); document.body.classList.remove('modal-open'); }
 function renderClientsTable(query){
   const q = (query||'').toLowerCase();
   const tbody = document.getElementById('clientsTableBody');

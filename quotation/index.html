@@ -82,6 +82,8 @@
         .mobile-actions{ position:fixed; bottom: env(safe-area-inset-bottom); left:0; right:0; background: linear-gradient(180deg, var(--gold-2), var(--gold-1)); border-top:1px solid var(--gold-3); display:grid; grid-template-columns: repeat(5, 1fr); gap:6px; padding:8px; z-index:1001; }
         .mobile-actions button{ padding:12px 10px; min-height:44px; border-radius:10px; border:1px solid #a98e5b; background:#fff; color:#5b4a26; font-weight:600; }
       }
+      /* While any modal is open, prevent fixed bars from catching clicks */
+      body.modal-open .mobile-actions, body.modal-open .mobile-summary { pointer-events: none; }
       /* Template simple */
       body.simple .gilded-frame{ background: var(--paper); border:1px solid var(--line); }
       body.simple .doc-title h1{ background: none; color: var(--ink); }
