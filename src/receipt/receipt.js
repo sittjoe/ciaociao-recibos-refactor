@@ -227,6 +227,7 @@ function loadReceiptAction(id) {
   $('#receiptNumber').textContent = r.number;
   $('#transactionType').value = r.transactionType || 'venta';
   $('#paymentMethod').value = r.paymentMethod || 'efectivo';
+  const on = document.getElementById('orderNumber'); if (on) on.textContent = r.orderNumber || '001';
   $('#clientName').textContent = r.client?.name || '';
   $('#clientPhone').textContent = r.client?.phone || '';
   $('#clientEmail').textContent = r.client?.email || '';
@@ -285,6 +286,7 @@ function newReceipt() {
   const number = generateReceiptNumber();
   $('#receiptNumber').textContent = number;
   setCurrentReceiptId(`receipt_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`);
+  const on = document.getElementById('orderNumber'); if (on) on.textContent = '001';
   const now = new Date();
   const valid = new Date(now); valid.setDate(valid.getDate() + 30);
   $('#issueDate').textContent = formatDate(now);
@@ -345,7 +347,7 @@ async function generatePDF() {
 function shareWhatsApp() {
   const r = collectReceiptData();
   let msg = `*RECIBO - CIAO CIAO MX*\n_Joyería Fina_\n━━━━━━━━━━━━━━━━━━━━━\n\n`;
-  msg += `*INFORMACIÓN DEL RECIBO*\nNúmero: ${r.number}\nTipo: ${r.transactionType}\nFecha: ${r.dates.issue}\nEntrega: ${r.dates.delivery}\n\n`;
+  msg += `*INFORMACIÓN DEL RECIBO*\nNúmero: ${r.number}\nTipo: ${r.transactionType}\nPedido: ${r.orderNumber || ''}\nFecha: ${r.dates.issue}\nEntrega: ${r.dates.delivery}\n\n`;
   msg += `*CLIENTE*\n${r.client.name}\nTel: ${r.client.phone}\n\n`;
   msg += `*PRODUCTOS/SERVICIOS*\n`;
   r.items.forEach(it => { msg += `• ${it.description}\n  Cant: ${it.qty} | Precio: $${it.price} | Total: $${it.subtotal}\n`; });
