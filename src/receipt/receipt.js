@@ -641,6 +641,11 @@ function init() {
       const ivaRateEl = document.getElementById('ivaRate');
       if (applyIvaEl && typeof s.applyIVA === 'boolean') applyIvaEl.checked = s.applyIVA;
       if (ivaRateEl && typeof s.ivaRate !== 'undefined') ivaRateEl.value = s.ivaRate;
+      // Defaults para verificador si no existen
+      let changed = false;
+      if (!('verifyBase' in s)) { s.verifyBase = 'https://recibos.ciaociao.mx'; changed = true; }
+      if (!('verifyPath' in s)) { s.verifyPath = '/verify/index.html'; changed = true; }
+      if (changed) { try { localStorage.setItem('app_settings', JSON.stringify(s)); } catch {} }
       if (typeof s.validityDays === 'number') {
         const now = new Date(); const v = new Date(now); v.setDate(v.getDate() + s.validityDays);
         $('#validUntil').textContent = formatDate(v);
@@ -999,9 +1004,11 @@ async function updateQR(){
   const p = base64url(payload);
   const h = await sha256Hex(p + '.' + getQRSecret());
   const settings = JSON.parse(localStorage.getItem('app_settings')||'{}');
-  let base = settings.verifyBase || 'https://sittjoe.github.io/ciaociao-recibos-refactor';
+  let base = settings.verifyBase || 'https://recibos.ciaociao.mx';
   if (!/^https?:\/\//i.test(base)) { const parts = location.pathname.split('/'); parts.pop(); parts.pop(); base = location.origin + (parts.join('/') || ''); }
-  const url = `${base}/verify/index.html?p=${p}&h=${h}`;
+  let path = settings.verifyPath || '/verify/index.html';
+  if (!path.startsWith('/')) path = '/' + path;
+  const url = `${base}${path}?p=${p}&h=${h}`;
   box.innerHTML = '';
   try { new QRCode(box, { text: url, width: 100, height: 100, correctLevel: QRCode.CorrectLevel.M }); } catch {}
   box.dataset.url = url;
@@ -1021,6 +1028,7 @@ function openSettingsModal(){
       if (typeof s.template !== 'undefined') document.getElementById('settingsTemplate').value = s.template;
       if (typeof s.pdfFormat !== 'undefined') document.getElementById('settingsPdfFormat').value = s.pdfFormat;
       if (typeof s.verifyBase !== 'undefined') document.getElementById('settingsVerifyBase').value = s.verifyBase;
+      if (typeof s.verifyPath !== 'undefined') document.getElementById('settingsVerifyPath').value = s.verifyPath;
       if (typeof s.lineRound !== 'undefined') document.getElementById('settingsLineRound').value = s.lineRound;
       if (typeof s.totalRound !== 'undefined') document.getElementById('settingsTotalRound').value = s.totalRound;
     }
@@ -1037,6 +1045,7 @@ function saveSettingsFromModal(){
     template: document.getElementById('settingsTemplate').value || 'premium',
     pdfFormat: document.getElementById('settingsPdfFormat').value || 'letter',
     verifyBase: document.getElementById('settingsVerifyBase').value || '',
+    verifyPath: document.getElementById('settingsVerifyPath').value || '/verify/index.html',
     lineRound: document.getElementById('settingsLineRound').value || 'none',
     totalRound: document.getElementById('settingsTotalRound').value || 'none'
   };
