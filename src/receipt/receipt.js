@@ -2,7 +2,7 @@ import { parseMoney, formatNumber, formatMoney, normalizeCurrencyText, normalize
 import { generateReceiptNumber, getCurrentReceiptId, setCurrentReceiptId, getSignatures, setSignature, clearSignature as clearSigState, resetSignatures } from './state.js';
 import { initSignature, openSignatureModal, closeSignatureModal, clearModalSignature, saveSignatureToTarget, clearSignature } from './signature.js';
 import { saveReceipt, loadReceipt, openHistory, closeHistory, searchHistory } from './history.js';
-import { getTemplates, searchTemplates } from '../common/templates.js';
+import { getTemplates, searchTemplates, exportTemplatesCSV, importTemplatesCSV, upsertTemplate, removeTemplate } from '../common/templates.js';
 
 const $ = (s, c = document) => c.querySelector(s);
 const $$ = (s, c = document) => Array.from(c.querySelectorAll(s));
@@ -59,7 +59,15 @@ function recalc() {
     const unit = parseMoney($('.price', tr)?.textContent);
     const gross = (qty * unit) || 0;
     const disc = parseLineDiscount($('.line-discount', tr)?.textContent || '0', gross);
-    const net = Math.max(gross - disc, 0);
+    let net = Math.max(gross - disc, 0);
+    // Aplicar redondeo por línea si está configurado
+    try {
+      const s = JSON.parse(localStorage.getItem('app_settings')||'{}');
+      if (s && s.lineRound && s.lineRound !== 'none') {
+        const inc = parseFloat(s.lineRound) || 0;
+        if (inc > 0) net = roundToIncrement(net, inc);
+      }
+    } catch {}
     $('.subtotal', tr).textContent = formatNumber(net);
     subtotal += net;
     lineDiscTotal += disc;
@@ -283,6 +291,8 @@ function newReceipt() {
   $('#deliveryDate').textContent = formatDate(now);
   $('#validUntil').textContent = formatDate(valid);
   recalc();
+  // Asegurar QR visible en nuevos recibos
+  updateQR();
 }
 
 function formatDate(date) {
@@ -386,6 +396,7 @@ async function generatePNG() {
 }
 
 function bindUI() {
+  try { console.log('[receipt] bindUI'); } catch {}
   const yearEl = $('#year'); if (yearEl) yearEl.textContent = new Date().getFullYear();
   $('#add-row').addEventListener('click', addRow);
   $('#save-receipt').addEventListener('click', saveReceiptAction);
@@ -619,6 +630,7 @@ function openTicketPreview(){
 }
 
 function init() {
+  try { console.log('[receipt] init start'); } catch {}
   // Load defaults
   try {
     const s = JSON.parse(localStorage.getItem('app_settings')||'{}');
@@ -643,6 +655,9 @@ function init() {
   $('#validUntil').textContent = formatDate(valid);
   initSignature(document.getElementById('signatureCanvas'));
   recalc();
+  try { console.log('[receipt] init after recalc, folio:', document.getElementById('receiptNumber')?.textContent); } catch {}
+  // Generar QR desde el inicio para evitar caja vacía
+  updateQR();
   setInterval(() => { if ($('#receiptNumber').textContent !== '---') saveReceiptAction(); }, 30000);
 
   // Warn on unsaved changes
@@ -654,7 +669,14 @@ function init() {
   window.addEventListener('beforeunload', (e) => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
 }
 
-document.addEventListener('DOMContentLoaded', () => { bindUI(); init(); });
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => { bindUI(); init(); });
+} else {
+  // Si el DOM ya está listo (por timing de módulos), inicializar de inmediato
+  bindUI(); init();
+}
+
+export { bindUI, init };
 
 // Prefill from a converted quote if present
 function prefillFromQuoteIfPresent() {
@@ -1018,8 +1040,17 @@ function saveSettingsFromModal(){
   try { localStorage.setItem('app_settings', JSON.stringify(s)); } catch {}
   const applyEl = document.getElementById('applyIVA'); if (applyEl) applyEl.checked = s.applyIVA;
   const rateEl = document.getElementById('ivaRate'); if (rateEl) rateEl.value = s.ivaRate;
+  // Actualizar validez mostrada acorde a configuración
+  try {
+    if (typeof s.validityDays === 'number') {
+      const now = new Date(); const v = new Date(now); v.setDate(v.getDate() + s.validityDays);
+      $('#validUntil').textContent = formatDate(v);
+    }
+  } catch {}
   if (s.template === 'simple') document.body.classList.add('simple'); else document.body.classList.remove('simple');
   recalc();
+  // Refrescar QR si cambió URL base de verificación
+  updateQR();
   closeSettingsModal();
 }
 

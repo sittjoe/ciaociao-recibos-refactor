@@ -117,7 +117,6 @@
   </head>
   <body>
     <script type="module" src="../src/common/security.js"></script>
-    <script type="module" src="../src/common/security.js"></script>
     <a href="../index.html" class="btn-back">← Volver al Inicio</a>
 
     <div id="notification" class="notification"><span id="notification-message"></span></div>
@@ -531,9 +530,10 @@
       </div>
     </div>
 
+    <script type="module" src="../src/receipt/receipt.js"></script>
     <script type="module">
-      import 'https://cdn.jsdelivr.net/gh/sittjoe/ciaociao-recibos-refactor@main/src/common/security.js';
-      import 'https://cdn.jsdelivr.net/gh/sittjoe/ciaociao-recibos-refactor@main/src/receipt/receipt.js';
+      import { bindUI, init } from '../src/receipt/receipt.js';
+      try { bindUI(); init(); } catch (e) { console.error('Init error', e); }
     </script>
     <script>
       if ('serviceWorker' in navigator) {

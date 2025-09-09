@@ -8,5 +8,8 @@
     "e2e": "playwright test",
     "lint": "eslint \"src/**/*.js\" --max-warnings=0 || true",
     "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.47.2"
   }
 }
