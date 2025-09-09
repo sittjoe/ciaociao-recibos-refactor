@@ -276,6 +276,36 @@ function bindUI() {
   if (closeSettingsBtn) closeSettingsBtn.addEventListener('click', closeSettingsModal);
   const saveSettingsBtn = document.getElementById('saveSettingsModal');
   if (saveSettingsBtn) saveSettingsBtn.addEventListener('click', saveSettingsFromModal);
+  // Export/Import data (local)
+  const expBtnQ = document.getElementById('exportDataQ');
+  const impInputQ = document.getElementById('importDataInputQ');
+  if (expBtnQ) expBtnQ.addEventListener('click', () => {
+    try {
+      const data = {
+        receipts: JSON.parse(localStorage.getItem('premium_receipts_ciaociao')||'[]'),
+        quotes: JSON.parse(localStorage.getItem('quotations_ciaociao')||'[]'),
+        templates: JSON.parse(localStorage.getItem('item_templates')||'[]'),
+        settings: JSON.parse(localStorage.getItem('app_settings')||'{}')
+      };
+      const blob = new Blob([JSON.stringify(data,null,2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'ciaociao-backup.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      showNotification('Datos exportados','success');
+    } catch { showNotification('Error al exportar','error'); }
+  });
+  if (impInputQ) impInputQ.addEventListener('change', async (e) => {
+    const file = e.target.files && e.target.files[0]; if (!file) return;
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      if (data.receipts) localStorage.setItem('premium_receipts_ciaociao', JSON.stringify(data.receipts));
+      if (data.quotes) localStorage.setItem('quotations_ciaociao', JSON.stringify(data.quotes));
+      if (data.templates) localStorage.setItem('item_templates', JSON.stringify(data.templates));
+      if (data.settings) localStorage.setItem('app_settings', JSON.stringify(data.settings));
+      showNotification('Datos importados','success');
+    } catch { showNotification('Archivo inválido','error'); }
+    e.target.value = '';
+  });
   // Clientes recientes (abrir modal, cerrar y buscar)
   const pickClient = document.getElementById('pick-client');
   if (pickClient) pickClient.addEventListener('click', openClientsModal);
