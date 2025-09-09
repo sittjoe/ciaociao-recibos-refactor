@@ -10,7 +10,10 @@
     <link rel="apple-touch-icon" href="./assets/logo-192.png" />
   </head>
   <body>
-    <script type="module" src="./src/common/security.js"></script>
+    <script type="module">
+      import 'https://cdn.jsdelivr.net/gh/sittjoe/ciaociao-recibos-refactor@main/src/common/security.js';
+      import 'https://cdn.jsdelivr.net/gh/sittjoe/ciaociao-recibos-refactor@main/src/home/main.js';
+    </script>
     <div class="mode-selector-container">
       <header class="selector-header">
         <img src="./assets/logo.png" alt="ciaociao.mx" class="logo-main" />
@@ -75,7 +78,7 @@
       </div>
     </div>
 
-    <script type="module" src="./src/home/main.js"></script>
+    
     <script>
       // Unregister any previous service workers to rely on live content (online-only scenario)
       if ('serviceWorker' in navigator) {

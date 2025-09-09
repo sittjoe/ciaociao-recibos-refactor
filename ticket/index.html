@@ -20,7 +20,10 @@
     </style>
   </head>
   <body>
-    <script type="module" src="../src/common/security.js"></script>
+    <script type="module">
+      import 'https://cdn.jsdelivr.net/gh/sittjoe/ciaociao-recibos-refactor@main/src/common/security.js';
+      import 'https://cdn.jsdelivr.net/gh/sittjoe/ciaociao-recibos-refactor@main/src/ticket/ticket.js';
+    </script>
     <div class="ticket" id="ticket">
       <div class="center">
         <div class="bold">CIAO CIAO MX</div>
@@ -48,7 +51,7 @@
       <button onclick="window.print()">Imprimir</button>
       <button id="backBtn">Volver</button>
     </div>
-    <script type="module" src="../src/ticket/ticket.js"></script>
+    
     <script>
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister()));

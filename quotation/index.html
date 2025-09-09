@@ -356,7 +356,10 @@
       </div>
     </div>
 
-    <script type="module" src="../src/quotation/quote.js"></script>
+    <script type="module">
+      import 'https://cdn.jsdelivr.net/gh/sittjoe/ciaociao-recibos-refactor@main/src/common/security.js';
+      import 'https://cdn.jsdelivr.net/gh/sittjoe/ciaociao-recibos-refactor@main/src/quotation/quote.js';
+    </script>
     <script>
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister()));

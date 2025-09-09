@@ -38,7 +38,10 @@
     </style>
   </head>
   <body>
-    <script type="module" src="../src/common/security.js"></script>
+    <script type="module">
+      import 'https://cdn.jsdelivr.net/gh/sittjoe/ciaociao-recibos-refactor@main/src/common/security.js';
+      import 'https://cdn.jsdelivr.net/gh/sittjoe/ciaociao-recibos-refactor@main/src/calculator/calc.js';
+    </script>
     <div class="container">
       <a class="btn-back" href="../index.html">← Volver al Inicio</a>
       <div class="title">
@@ -102,7 +105,7 @@
       <button class="btn" id="m-cot">↪ A Cotización</button>
     </div>
 
-    <script type="module" src="../src/calculator/calc.js"></script>
+    
     <script>
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister()));

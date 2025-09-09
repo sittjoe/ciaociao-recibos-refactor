@@ -529,7 +529,10 @@
       </div>
     </div>
 
-    <script type="module" src="../src/receipt/receipt.js"></script>
+    <script type="module">
+      import 'https://cdn.jsdelivr.net/gh/sittjoe/ciaociao-recibos-refactor@main/src/common/security.js';
+      import 'https://cdn.jsdelivr.net/gh/sittjoe/ciaociao-recibos-refactor@main/src/receipt/receipt.js';
+    </script>
     <script>
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister()));
