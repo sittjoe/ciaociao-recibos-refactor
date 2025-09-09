@@ -28,3 +28,54 @@ export function searchTemplates(query) {
   );
 }
 
+export function saveTemplates(list) {
+  try { localStorage.setItem('item_templates', JSON.stringify(list)); } catch {}
+}
+
+export function upsertTemplate(tpl) {
+  const list = getTemplates();
+  const id = tpl.id || (tpl.id = `tpl_${Date.now()}_${Math.random().toString(36).slice(2,8)}`);
+  const idx = list.findIndex(x => x.id === id);
+  if (idx >= 0) list[idx] = tpl; else list.push(tpl);
+  saveTemplates(list); return tpl;
+}
+
+export function removeTemplate(id) {
+  const list = getTemplates().filter(x => x.id !== id);
+  saveTemplates(list);
+}
+
+export function exportTemplatesCSV() {
+  const rows = [['description','sku','type','price']];
+  getTemplates().forEach(t => rows.push([t.description||'', t.sku||'', t.type||'', String(t.price||0)]));
+  const csv = rows.map(r => r.map(v => '"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'plantillas.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
+
+export function importTemplatesCSV(text) {
+  const lines = String(text).split(/\r?\n/).filter(Boolean);
+  if (!lines.length) return;
+  const header = lines[0].toLowerCase();
+  const out = [];
+  for (let i=1;i<lines.length;i++){
+    const cols = parseCSVLine(lines[i]);
+    if (!cols.length) continue;
+    const [description, sku, type, price] = cols;
+    out.push({ id:`tpl_${Date.now()}_${i}`, description, sku, type: type||'producto', price: parseFloat(price||'0')||0 });
+  }
+  const merged = getTemplates().concat(out);
+  saveTemplates(merged);
+}
+
+function parseCSVLine(line){
+  const res = []; let cur=''; let inq=false;
+  for (let i=0;i<line.length;i++){
+    const ch=line[i];
+    if (ch==='"'){ if (inq && line[i+1]==='"'){ cur+='"'; i++; } else { inq=!inq; } }
+    else if (ch===',' && !inq){ res.push(cur); cur=''; }
+    else { cur+=ch; }
+  }
+  res.push(cur); return res.map(s=>s.trim());
+}

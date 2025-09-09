@@ -414,9 +414,26 @@
         <h3>Plantillas de ítems</h3>
         <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
           <input id="templatesSearch" placeholder="Buscar por descripción, SKU o tipo..." style="flex:1; padding:10px; border:1px solid #e5e5e5; border-radius:8px;"/>
+          <button class="btn" id="tplExport">Exportar CSV</button>
+          <label class="btn" for="tplImportInput" style="cursor:pointer;">Importar CSV</label>
+          <input id="tplImportInput" type="file" accept="text/csv" style="display:none;" />
+        </div>
+        <div style="display:grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap:8px; margin:8px 0;">
+          <input id="tplDesc" placeholder="Descripción" style="padding:10px; border:1px solid #e5e5e5; border-radius:8px;"/>
+          <input id="tplSku" placeholder="SKU" style="padding:10px; border:1px solid #e5e5e5; border-radius:8px;"/>
+          <select id="tplType" style="padding:10px; border:1px solid #e5e5e5; border-radius:8px;">
+            <option value="producto">Producto</option>
+            <option value="servicio">Servicio</option>
+            <option value="reparacion">Reparación</option>
+          </select>
+          <input id="tplPrice" type="number" step="0.01" placeholder="Precio" style="padding:10px; border:1px solid #e5e5e5; border-radius:8px;"/>
+        </div>
+        <div style="display:flex; gap:8px; justify-content:flex-end; margin-bottom:8px;">
+          <button class="btn secondary" id="tplNew">Nuevo</button>
+          <button class="btn success" id="tplSave">Guardar</button>
         </div>
         <table class="history-table">
-          <thead><tr><th>Descripción</th><th>SKU</th><th>Tipo</th><th class="right">Precio</th><th class="center">Acción</th></tr></thead>
+          <thead><tr><th>Descripción</th><th>SKU</th><th>Tipo</th><th class="right">Precio</th><th class="center">Acciones</th></tr></thead>
           <tbody id="templatesTableBody"></tbody>
         </table>
         <div style="text-align:right; margin-top:12px;"><button class="btn" id="closeTemplatesModal">Cerrar</button></div>

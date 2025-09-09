@@ -380,6 +380,10 @@ function bindUI() {
   if (closeTplBtn) closeTplBtn.addEventListener('click', closeTemplatesModal);
   const tplSearch = document.getElementById('templatesSearch');
   if (tplSearch) tplSearch.addEventListener('input', e => renderTemplatesTable(e.target.value));
+  const tplNew = document.getElementById('tplNew'); if (tplNew) tplNew.addEventListener('click', clearTplForm);
+  const tplSave = document.getElementById('tplSave'); if (tplSave) tplSave.addEventListener('click', saveTplFromForm);
+  const tplExport = document.getElementById('tplExport'); if (tplExport) tplExport.addEventListener('click', exportTemplatesCSV);
+  const tplImport = document.getElementById('tplImportInput'); if (tplImport) tplImport.addEventListener('change', onTplImport);
   // Mobile actions
   const ms = document.getElementById('mobileSummary');
   const ma = document.getElementById('mobileActions');
@@ -817,11 +821,18 @@ function renderTemplatesTable(query){
     tbody.appendChild(tr);
   });
   tbody.onclick = (e)=>{
-    const btn = e.target.closest('button[data-addtpl]'); if (!btn) return;
-    const t = JSON.parse(decodeURIComponent(btn.getAttribute('data-addtpl')));
-    addRowFromTemplate(t);
+    const btn = e.target.closest('button[data-addtpl]');
+    if (btn){ const t = JSON.parse(decodeURIComponent(btn.getAttribute('data-addtpl'))); addRowFromTemplate(t); return; }
+    const ed = e.target.closest('button[data-edittpl]');
+    const del = e.target.closest('button[data-deltpl]');
+    if (ed){ const id = ed.getAttribute('data-edittpl'); loadTplToForm(id); }
+    if (del){ const id = del.getAttribute('data-deltpl'); removeTemplate(id); renderTemplatesTable(document.getElementById('templatesSearch').value); }
   };
 }
+function clearTplForm(){ document.getElementById('tplDesc').value=''; document.getElementById('tplSku').value=''; document.getElementById('tplType').value='producto'; document.getElementById('tplPrice').value=''; document.getElementById('tplSave').dataset.id=''; }
+function loadTplToForm(id){ const t = getTemplates().find(x=>x.id===id); if (!t) return; document.getElementById('tplDesc').value=t.description||''; document.getElementById('tplSku').value=t.sku||''; document.getElementById('tplType').value=t.type||'producto'; document.getElementById('tplPrice').value=String(t.price||0); document.getElementById('tplSave').dataset.id=t.id; }
+function saveTplFromForm(){ const id = document.getElementById('tplSave').dataset.id||undefined; const description = document.getElementById('tplDesc').value.trim(); const sku = document.getElementById('tplSku').value.trim(); const type = document.getElementById('tplType').value; const price = parseFloat(document.getElementById('tplPrice').value||'0')||0; if (!description){ showNotification('Descripción requerida','error'); return;} upsertTemplate({ id, description, sku, type, price }); renderTemplatesTable(document.getElementById('templatesSearch').value); clearTplForm(); showNotification('Plantilla guardada','success'); }
+function onTplImport(e){ const file = e.target.files && e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = () => { importTemplatesCSV(reader.result||''); renderTemplatesTable(document.getElementById('templatesSearch').value); showNotification('Plantillas importadas','success'); }; reader.readAsText(file); e.target.value=''; }
 function addRowFromTemplate(t){
   const tr = document.createElement('tr');
   tr.innerHTML = `
