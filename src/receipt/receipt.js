@@ -466,6 +466,9 @@ function bindUI() {
     if (clear) clearSignature(clear.getAttribute('data-type'));
     const sig = e.target.closest('[data-signature]');
     if (sig) openSignatureModal(sig.getAttribute('data-signature'));
+    // Fallback: open common modals via delegation
+    if (e.target.closest('#openSettings')) { e.preventDefault(); openSettingsModal(); }
+    if (e.target.closest('#pick-client')) { e.preventDefault(); openClientsModal(); }
   });
 
   document.getElementById('clearModalSignature').addEventListener('click', clearModalSignature);

@@ -352,6 +352,9 @@ function bindUI() {
       if (action === 'row-up' && tr && tbody) { const prev = tr.previousElementSibling; if (prev) tbody.insertBefore(tr, prev); recalc(); }
       if (action === 'row-down' && tr && tbody) { const next = tr.nextElementSibling; if (next) tbody.insertBefore(next, tr); recalc(); }
     }
+    // Fallback: open modals via delegation too
+    if (e.target.closest('#openSettings')) { e.preventDefault(); openSettingsModal(); }
+    if (e.target.closest('#pick-client')) { e.preventDefault(); openClientsModal(); }
   });
 
   document.addEventListener('input', e => { if (e.target.matches('[contenteditable]')) recalc(); });
