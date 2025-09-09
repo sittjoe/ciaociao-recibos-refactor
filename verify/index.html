@@ -51,7 +51,39 @@
         <div class="footer">© <span id="year"></span> CIAO CIAO MX – Joyería Fina • info@ciaociao.mx</div>
       </div>
     </div>
-    <script type="module" src="../src/verify/verify.js"></script>
+    <script>
+      (function(){
+        function b64urlToBytes(b64url){ try{ const b64=b64url.replace(/-/g,'+').replace(/_/g,'/'); const pad='='.repeat((4-(b64.length%4))%4); const str=atob(b64+pad); const bytes=new Uint8Array(str.length); for(let i=0;i<str.length;i++) bytes[i]=str.charCodeAt(i); return bytes; }catch(e){ return new Uint8Array(0); } }
+        function bytesToHex(buf){ return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join(''); }
+        async function sha256Hex(text){ const enc = new TextEncoder(); const buf = await crypto.subtle.digest('SHA-256', enc.encode(text)); return bytesToHex(buf); }
+        function setValue(id,val){ var el=document.getElementById(id); if(el) el.textContent=val; }
+        function getSecret(){ try{ const custom=localStorage.getItem('qr_secret'); if(custom) return custom; }catch{} return 'CCMX-QR-2025'; }
+        function toBad(m){ var b=document.getElementById('statusBadge'); if(!b) return; b.className='status bad'; b.textContent=m; }
+        function toOk(m){ var b=document.getElementById('statusBadge'); if(!b) return; b.className='status ok'; b.textContent=m; }
+        async function main(){
+          var y=document.getElementById('year'); if(y) y.textContent = new Date().getFullYear();
+          var params=new URLSearchParams(window.location.search);
+          var p=params.get('p'); var h=params.get('h');
+          if(!p||!h){ toBad('QR inválido'); return; }
+          try{
+            var json = new TextDecoder().decode(b64urlToBytes(p));
+            var payload = JSON.parse(json);
+            var expected = await sha256Hex(p + '.' + getSecret());
+            if (expected !== h) { toBad('No verificado'); } else { toOk('Verificado'); }
+            setValue('vType', payload.t==='R'?'Recibo':(payload.t==='Q'?'Cotización':(payload.t||'-')));
+            setValue('vNumber', payload.n||'-');
+            setValue('vClient', payload.c||'-');
+            setValue('vDate', payload.d||'-');
+            setValue('vTotal', payload.tot||'-');
+            setValue('vId', payload.id||'-');
+          }catch(e){ toBad('QR inválido'); }
+
+          var cu=document.getElementById('copyUrl'); if(cu){ cu.addEventListener('click', async function(){ try{ await navigator.clipboard.writeText(window.location.href);}catch{} }); }
+          var oh=document.getElementById('openHome'); if(oh){ oh.addEventListener('click', function(){ try{ var base='https://recibos.ciaociao.mx'; window.location.href = base + '/index.html'; } catch{} }); }
+        }
+        if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', main); } else { main(); }
+      })();
+    </script>
     <script>
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister()));
