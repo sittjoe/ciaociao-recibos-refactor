@@ -82,10 +82,14 @@
         .mobile-actions{ position:fixed; bottom: env(safe-area-inset-bottom); left:0; right:0; background: linear-gradient(180deg, var(--gold-2), var(--gold-1)); border-top:1px solid var(--gold-3); display:grid; grid-template-columns: repeat(5, 1fr); gap:6px; padding:8px; z-index:1001; }
         .mobile-actions button{ padding:12px 10px; min-height:44px; border-radius:10px; border:1px solid #a98e5b; background:#fff; color:#5b4a26; font-weight:600; }
       }
+      /* Template simple */
+      body.simple .gilded-frame{ background: var(--paper); border:1px solid var(--line); }
+      body.simple .doc-title h1{ background: none; color: var(--ink); }
+      body.simple .items thead th{ background: #fafafa; }
+      body.simple .sum-card .row.total{ background:#fafafa; }
     </style>
   </head>
   <body>
-    <script type="module" src="../src/common/security.js"></script>
     <script type="module" src="../src/common/security.js"></script>
     <a href="../index.html" class="btn-back">← Volver al Inicio</a>
     <div id="notification" class="notification"><span id="notification-message"></span></div>
@@ -261,6 +265,7 @@
             <button class="btn secondary" id="save-quote">💾 Guardar</button>
             <button class="btn secondary" id="new-quote">📄 Nuevo</button>
             <button class="btn secondary" id="show-history">📚 Historial</button>
+            <button class="btn secondary" id="openSettings">⚙️ Ajustes</button>
           </div>
           <div class="actions-right">
             <button class="btn primary" id="share-whatsapp">📱 WhatsApp</button>
@@ -287,6 +292,47 @@
         <div style="text-align:right; margin-top:12px;"><button class="btn" id="closeTemplatesModal">Cerrar</button></div>
       </div>
     </div>
+
+    <!-- Modal de ajustes -->
+    <div id="settingsModal" class="history-modal">
+      <div class="history-modal-content" style="max-width:560px;">
+        <h3>Ajustes</h3>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <label class="form-label">IVA por defecto (%)
+            <input id="settingsIvaRate" type="number" min="0" max="100" step="0.1" style="width:100%; padding:10px; border:1px solid #e5e5e5; border-radius:8px;" />
+          </label>
+          <label class="form-label">Aplicar IVA por defecto
+            <select id="settingsApplyIVA" style="width:100%; padding:10px; border:1px solid #e5e5e5; border-radius:8px;">
+              <option value="true">Sí</option>
+              <option value="false">No</option>
+            </select>
+          </label>
+          <label class="form-label">Días de validez por defecto
+            <input id="settingsValidityDays" type="number" min="0" step="1" style="width:100%; padding:10px; border:1px solid #e5e5e5; border-radius:8px;" />
+          </label>
+          <label class="form-label">Plantilla
+            <select id="settingsTemplate" style="width:100%; padding:10px; border:1px solid #e5e5e5; border-radius:8px;">
+              <option value="premium">Premium</option>
+              <option value="simple">Simple</option>
+            </select>
+          </label>
+          <label class="form-label">Tamaño PDF
+            <select id="settingsPdfFormat" style="width:100%; padding:10px; border:1px solid #e5e5e5; border-radius:8px;">
+              <option value="letter">Carta (Letter)</option>
+              <option value="a4">A4</option>
+            </select>
+          </label>
+          <label class="form-label">URL verificador (opcional)
+            <input id="settingsVerifyBase" type="url" placeholder="https://recibos.ciaociao.mx" style="width:100%; padding:10px; border:1px solid #e5e5e5; border-radius:8px;" />
+          </label>
+        </div>
+        <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px;">
+          <button class="btn" id="closeSettingsModal">Cancelar</button>
+          <button class="btn success" id="saveSettingsModal">Guardar</button>
+        </div>
+      </div>
+    </div>
+
 
     <!-- Modal de clientes recientes -->
     <div id="clientsModal" class="history-modal">

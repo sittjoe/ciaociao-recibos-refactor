@@ -269,6 +269,13 @@ function bindUI() {
   if (closeTplBtn) closeTplBtn.addEventListener('click', closeTemplatesModal);
   const tplSearch = document.getElementById('templatesSearch');
   if (tplSearch) tplSearch.addEventListener('input', e => renderTemplatesTable(e.target.value));
+  // Ajustes
+  const openSettingsBtn = document.getElementById('openSettings');
+  if (openSettingsBtn) openSettingsBtn.addEventListener('click', openSettingsModal);
+  const closeSettingsBtn = document.getElementById('closeSettingsModal');
+  if (closeSettingsBtn) closeSettingsBtn.addEventListener('click', closeSettingsModal);
+  const saveSettingsBtn = document.getElementById('saveSettingsModal');
+  if (saveSettingsBtn) saveSettingsBtn.addEventListener('click', saveSettingsFromModal);
   // Clientes recientes (abrir modal, cerrar y buscar)
   const pickClient = document.getElementById('pick-client');
   if (pickClient) pickClient.addEventListener('click', openClientsModal);
@@ -398,6 +405,21 @@ function prefillFromCalculatorIfPresent() {
 }
 
 function init() {
+  // Load defaults from shared app_settings
+  try {
+    const s = JSON.parse(localStorage.getItem('app_settings')||'{}');
+    if (s && typeof s === 'object') {
+      const applyIvaEl = document.getElementById('applyIVA');
+      const ivaRateEl = document.getElementById('ivaRate');
+      if (applyIvaEl && typeof s.applyIVA === 'boolean') applyIvaEl.checked = s.applyIVA;
+      if (ivaRateEl && typeof s.ivaRate !== 'undefined') ivaRateEl.value = s.ivaRate;
+      if (typeof s.validityDays === 'number') {
+        const now = new Date(); const v = new Date(now); v.setDate(v.getDate() + s.validityDays);
+        $('#validUntil').textContent = formatDate(v);
+      }
+      if (s.template === 'simple') document.body.classList.add('simple');
+    }
+  } catch {}
   const number = generateQuoteNumber();
   $('#quoteNumber').textContent = number;
   setCurrentQuoteId(`quote_${Date.now()}_${Math.random().toString(36).slice(2,11)}`);
@@ -409,6 +431,39 @@ function init() {
 }
 
 document.addEventListener('DOMContentLoaded', () => { bindUI(); init(); });
+
+// Ajustes (guardar/cargar)
+function openSettingsModal(){
+  try {
+    const s = JSON.parse(localStorage.getItem('app_settings')||'{}');
+    if (s){
+      if (typeof s.ivaRate !== 'undefined') document.getElementById('settingsIvaRate').value = s.ivaRate;
+      if (typeof s.applyIVA !== 'undefined') document.getElementById('settingsApplyIVA').value = String(!!s.applyIVA);
+      if (typeof s.validityDays !== 'undefined') document.getElementById('settingsValidityDays').value = s.validityDays;
+      if (typeof s.template !== 'undefined') document.getElementById('settingsTemplate').value = s.template;
+      if (typeof s.pdfFormat !== 'undefined') document.getElementById('settingsPdfFormat').value = s.pdfFormat;
+      if (typeof s.verifyBase !== 'undefined') document.getElementById('settingsVerifyBase').value = s.verifyBase;
+    }
+  } catch {}
+  document.getElementById('settingsModal').classList.add('active');
+}
+function closeSettingsModal(){ document.getElementById('settingsModal').classList.remove('active'); }
+function saveSettingsFromModal(){
+  const s = {
+    ivaRate: parseFloat(document.getElementById('settingsIvaRate').value || '16') || 16,
+    applyIVA: document.getElementById('settingsApplyIVA').value === 'true',
+    validityDays: Math.max(0, parseInt(document.getElementById('settingsValidityDays').value || '30', 10)),
+    template: document.getElementById('settingsTemplate').value || 'premium',
+    pdfFormat: document.getElementById('settingsPdfFormat').value || 'letter',
+    verifyBase: document.getElementById('settingsVerifyBase').value || ''
+  };
+  try { localStorage.setItem('app_settings', JSON.stringify(s)); } catch {}
+  const applyEl = document.getElementById('applyIVA'); if (applyEl) applyEl.checked = s.applyIVA;
+  const rateEl = document.getElementById('ivaRate'); if (rateEl) rateEl.value = s.ivaRate;
+  if (s.template === 'simple') document.body.classList.add('simple'); else document.body.classList.remove('simple');
+  recalc();
+  closeSettingsModal();
+}
 
 async function generatePNG(){
   try {
