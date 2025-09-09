@@ -395,7 +395,7 @@ function bindUI() {
     document.getElementById('ma-save').addEventListener('click', saveReceiptAction);
     document.getElementById('ma-pdf').addEventListener('click', generatePDF);
     document.getElementById('ma-png').addEventListener('click', generatePNG);
-    document.getElementById('ma-wa').addEventListener('click', shareWhatsApp);
+    document.getElementById('ma-extra').addEventListener('click', shareWhatsApp);
   }
   // QR clickable
   const qr = document.getElementById('qrBox');
