@@ -4,6 +4,7 @@ let signatureCanvas, ctx, isDrawing = false, currentType = null;
 
 export function initSignature(canvasEl) {
   signatureCanvas = canvasEl;
+  scaleCanvasForDPR();
   ctx = signatureCanvas.getContext('2d');
   ctx.strokeStyle = '#1f2937';
   ctx.lineWidth = 2;
@@ -19,6 +20,19 @@ export function initSignature(canvasEl) {
   signatureCanvas.addEventListener('touchmove', touch);
   signatureCanvas.addEventListener('touchend', stop);
 }
+
+function scaleCanvasForDPR(){
+  if (!signatureCanvas) return;
+  const dpr = Math.max(window.devicePixelRatio || 1, 1);
+  const cssWidth = signatureCanvas.clientWidth || 450;
+  const cssHeight = signatureCanvas.clientHeight || 200;
+  signatureCanvas.width = Math.floor(cssWidth * dpr);
+  signatureCanvas.height = Math.floor(cssHeight * dpr);
+  const c = signatureCanvas.getContext('2d');
+  if (c) c.setTransform(dpr,0,0,dpr,0,0);
+}
+
+window.addEventListener('resize', ()=>{ if (signatureCanvas) scaleCanvasForDPR(); });
 
 export function openSignatureModal(type) {
   currentType = type;
@@ -99,4 +113,3 @@ function touch(e) {
   const ev = new MouseEvent(e.type === 'touchstart' ? 'mousedown' : e.type === 'touchmove' ? 'mousemove' : 'mouseup', { clientX: t.clientX, clientY: t.clientY });
   signatureCanvas.dispatchEvent(ev);
 }
-

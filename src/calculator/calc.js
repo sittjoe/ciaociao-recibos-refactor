@@ -82,14 +82,63 @@ function exportarACotizacion() {
 }
 
 function bind() {
+  const dCalc = debounce(calc, 50);
   ['metal','precioGramo','peso','horas','tarifa','gemas','margen','aplicaIVA'].forEach(id => {
-    document.getElementById(id).addEventListener('input', calc);
-    document.getElementById(id).addEventListener('change', calc);
+    document.getElementById(id).addEventListener('input', (e)=>{ sanitizeNumber(e.target); dCalc(); persist(); });
+    document.getElementById(id).addEventListener('change', ()=>{ dCalc(); persist(); });
   });
   document.getElementById('guardar').addEventListener('click', guardar);
   document.getElementById('aCotizacion').addEventListener('click', exportarACotizacion);
+  document.getElementById('m-guardar').addEventListener('click', guardar);
+  document.getElementById('m-cot').addEventListener('click', exportarACotizacion);
+  // Cargar estado previo
+  restore();
   calc();
 }
 
 document.addEventListener('DOMContentLoaded', bind);
 
+function sanitizeNumber(input){
+  if (!input) return;
+  const id = input.id;
+  const val = input.value;
+  if (['peso','precioGramo','horas','tarifa','gemas','margen'].includes(id)){
+    const cleaned = String(val).replace(/[^0-9.\-]/g,'');
+    if (cleaned !== val) input.value = cleaned;
+  }
+}
+
+function persist(){
+  try {
+    const s = {
+      metal: $('#metal').value,
+      precioGramo: $('#precioGramo').value,
+      peso: $('#peso').value,
+      horas: $('#horas').value,
+      tarifa: $('#tarifa').value,
+      gemas: $('#gemas').value,
+      margen: $('#margen').value,
+      aplicaIVA: $('#aplicaIVA').value,
+      cliente: { nombre: $('#cliNombre').value, tel: $('#cliTel').value, desc: $('#descripcion').value }
+    };
+    localStorage.setItem('calc_state', JSON.stringify(s));
+  } catch {}
+}
+
+function restore(){
+  try {
+    const s = JSON.parse(localStorage.getItem('calc_state')||'{}');
+    if (!s) return;
+    if (s.metal) $('#metal').value = s.metal;
+    if (s.precioGramo) $('#precioGramo').value = s.precioGramo;
+    if (s.peso) $('#peso').value = s.peso;
+    if (s.horas) $('#horas').value = s.horas;
+    if (s.tarifa) $('#tarifa').value = s.tarifa;
+    if (s.gemas) $('#gemas').value = s.gemas;
+    if (s.margen) $('#margen').value = s.margen;
+    if (s.aplicaIVA) $('#aplicaIVA').value = s.aplicaIVA;
+    if (s.cliente){ $('#cliNombre').value = s.cliente.nombre||''; $('#cliTel').value = s.cliente.tel||''; $('#descripcion').value = s.cliente.desc||''; }
+  } catch {}
+}
+
+function debounce(fn, wait=50){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), wait); }; }

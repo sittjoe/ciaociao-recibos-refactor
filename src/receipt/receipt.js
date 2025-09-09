@@ -461,7 +461,8 @@ function bindUI() {
     showNotification('Firma guardada correctamente', 'success');
   });
 
-  document.addEventListener('input', e => { if (e.target.matches('[contenteditable]') || e.target.matches('select')) recalc(); });
+  const dRecalc = debounce(recalc, 50);
+  document.addEventListener('input', e => { if (e.target.matches('[contenteditable]') || e.target.matches('select')) dRecalc(); });
   // Formateo automático en blur para celdas numéricas
   document.addEventListener('focusout', e => {
     const t = e.target;
@@ -783,6 +784,10 @@ async function exportStart(){
   if (wasSimple) body.classList.remove('simple');
   await waitFor(()=>true, 50);
   return () => { body.classList.remove('exporting'); if (wasSimple) body.classList.add('simple'); };
+}
+
+function debounce(fn, wait=50){
+  let t; return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args), wait); };
 }
 
 // =============
