@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Ticket | CiaoCiao.mx – Joyería Fina</title>
     <style>
-      :root { --ink:#111; }
-      body{ margin:0; background:#f8f8f8; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+      :root{ --bg:#f8f7f3; --paper:#fffdfa; --ink:#1f2937; --muted:#6b7280; --line:#e7e3d9; --gold-1:#bfa36f; --gold-2:#d9c08c; --gold-3:#a98e5b; }
+      body{ margin:0; background:var(--bg); color:var(--ink); font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, sans-serif; }
       .ticket{ width:80mm; max-width:80mm; margin:12px auto; background:#fff; color:var(--ink); padding:6mm 4mm; border:1px dashed #ddd; }
       .center{ text-align:center; }
       .line{ display:flex; justify-content:space-between; }
@@ -15,7 +15,8 @@
       .bold{ font-weight:700; }
       .items{ margin:6px 0; }
       .items .row{ display:flex; justify-content:space-between; margin:2px 0; }
-      .actions{ display:flex; gap:8px; justify-content:center; margin-top:8px; }
+      .actions{ display:flex; gap:8px; justify-content:center; margin:12px 0 24px; }
+      .actions button{ padding:10px 12px; border-radius:10px; border:1px solid var(--gold-3); background:linear-gradient(180deg,var(--gold-2),var(--gold-1)); color:#664f22; cursor:pointer; font-weight:600; }
       @media print{ body{ background:#fff; } .actions{ display:none; } .ticket{ border:none; margin:0; } }
     </style>
   </head>
