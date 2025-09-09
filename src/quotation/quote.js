@@ -269,6 +269,13 @@ function bindUI() {
   if (closeTplBtn) closeTplBtn.addEventListener('click', closeTemplatesModal);
   const tplSearch = document.getElementById('templatesSearch');
   if (tplSearch) tplSearch.addEventListener('input', e => renderTemplatesTable(e.target.value));
+  // Clientes recientes (abrir modal, cerrar y buscar)
+  const pickClient = document.getElementById('pick-client');
+  if (pickClient) pickClient.addEventListener('click', openClientsModal);
+  const closeClientsBtn = document.getElementById('closeClientsModal');
+  if (closeClientsBtn) closeClientsBtn.addEventListener('click', closeClientsModal);
+  const clientSearch = document.getElementById('clientSearch');
+  if (clientSearch) clientSearch.addEventListener('input', e => renderClientsTable(e.target.value));
   // Mobile actions bar (show on small screens and wire actions)
   const ms = document.getElementById('mobileSummary');
   const ma = document.getElementById('mobileActions');

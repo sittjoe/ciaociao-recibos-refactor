@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Acceso | ciaociao.mx</title>
+    <style>
+      :root{ --bg:#0f0f14; --panel:#131622; --ink:#eaeaea; --muted:#9aa3b2; --gold:#d9c08c; }
+      body{ margin:0; background:linear-gradient(180deg,#0b0d12,#151827); color:var(--ink); font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, sans-serif; }
+      .wrap{ min-height:100dvh; display:grid; place-items:center; padding:16px; }
+      .card{ width:100%; max-width:360px; background:linear-gradient(180deg,#151a28,#101420); border:1px solid rgba(255,255,255,.08); border-radius:16px; padding:20px; box-shadow:0 12px 40px rgba(0,0,0,.35); }
+      .title{ display:flex; align-items:center; gap:12px; margin:0 0 6px; }
+      .title img{ width: 64px; height:auto; border-radius:12px; }
+      h1{ margin:0; font-size:18px; }
+      p{ margin:4px 0 12px; color:var(--muted); font-size:13px; }
+      .input{ width:100%; padding:12px; background:#0f1320; border:1px solid rgba(255,255,255,.12); border-radius:10px; color:var(--ink); }
+      .actions{ display:flex; gap:8px; justify-content:flex-end; margin-top:12px; }
+      .btn{ padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,.14); background:#1b2030; color:var(--ink); cursor:pointer; }
+      .btn.primary{ background:linear-gradient(180deg,var(--gold),#bfa36f); color:#4d3a17; border:none; }
+      .error{ color:#f87171; font-size:12px; min-height:16px; margin-top:8px; }
+    </style>
+  </head>
+  <body>
+    <script type="module" src="../src/common/security.js"></script>
+    <div class="wrap">
+      <div class="card">
+        <div class="title">
+          <img src="../assets/logo.png" alt="ciaociao.mx" />
+          <div>
+            <h1>Acceso</h1>
+            <p>Ingresa la contraseña para continuar.</p>
+          </div>
+        </div>
+        <input id="passInput" class="input" type="password" placeholder="Contraseña" autocomplete="current-password" />
+        <div id="err" class="error"></div>
+        <div class="actions">
+          <button id="cancel" class="btn">Cancelar</button>
+          <button id="enter" class="btn primary">Entrar</button>
+        </div>
+      </div>
+    </div>
+    <script>
+      const q = new URLSearchParams(location.search);
+      const redirect = q.get('redirect');
+      const input = document.getElementById('passInput');
+      const err = document.getElementById('err');
+      const enter = document.getElementById('enter');
+      const cancel = document.getElementById('cancel');
+      const base = (function(){ try{ const parts = location.pathname.split('/').filter(Boolean); if (location.host.includes('github.io') && parts.length) return '/' + parts[0]; return ''; } catch { return ''; } })();
+
+      function goHome(){ window.location.replace(redirect ? redirect : base + '/index.html'); }
+      function tryLogin(){
+        if (!window.authManager || typeof window.authManager.setSession !== 'function'){ err.textContent = 'Error de sesión'; return; }
+        if (input.value === '27181730') { window.authManager.setSession(); goHome(); }
+        else { err.textContent = 'Contraseña incorrecta'; input.select(); }
+      }
+      enter.addEventListener('click', tryLogin);
+      input.addEventListener('keydown', e => { if (e.key === 'Enter') tryLogin(); });
+      cancel.addEventListener('click', () => { window.location.href = 'https://www.ciaociao.mx'; });
+      setTimeout(()=> input.focus(), 50);
+      // Si ya está autenticado, redirigir de inmediato
+      try { if (localStorage.getItem('isAuthenticated')==='true' && parseInt(localStorage.getItem('sessionExpiry')||'0',10) > Date.now()) goHome(); } catch{}
+    </script>
+  </body>
+  </html>
+

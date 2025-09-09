@@ -52,9 +52,12 @@ function setup() {
   // Logout
   const logout = qs('#logoutBtnSelector');
   if (logout) logout.addEventListener('click', () => {
-    localStorage.removeItem('isAuthenticated');
-    localStorage.removeItem('sessionExpiry');
-    window.location.reload();
+    if (window.authManager && typeof window.authManager.logout === 'function') window.authManager.logout();
+    else {
+      localStorage.removeItem('isAuthenticated');
+      localStorage.removeItem('sessionExpiry');
+      window.location.reload();
+    }
   });
 
   loadStatistics();
