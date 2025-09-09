@@ -384,14 +384,14 @@
         <div class="actions no-print">
           <div class="actions-left">
             <button class="btn secondary" id="edit-data">✏️ Editar datos</button>
-            <button class="btn secondary" id="pick-client">👤 Seleccionar cliente</button>
+            <button class="btn secondary" id="pick-client" type="button" onclick="(function(){var m=document.getElementById('clientsModal'); if(m){m.classList.add('active'); document.body.classList.add('modal-open');}})()">👤 Seleccionar cliente</button>
             <button class="btn secondary" id="add-row">➕ Agregar</button>
             <button class="btn secondary" id="add-item-form">➕ Agregar (form)</button>
             <button class="btn secondary" id="open-templates">🧩 Plantillas</button>
             <button class="btn secondary" id="save-receipt">💾 Guardar</button>
             <button class="btn secondary" id="new-receipt">📄 Nuevo</button>
             <button class="btn secondary" id="show-history">📚 Historial</button>
-            <button class="btn secondary" id="openSettings">⚙️ Ajustes</button>
+            <button class="btn secondary" id="openSettings" type="button" onclick="(function(){var m=document.getElementById('settingsModal'); if(m){m.classList.add('active'); document.body.classList.add('modal-open');}})()">⚙️ Ajustes</button>
           </div>
           <div class="actions-right">
             <button class="btn primary" id="share-whatsapp">📱 WhatsApp</button>
@@ -444,7 +444,7 @@
           <thead><tr><th>Descripción</th><th>SKU</th><th>Tipo</th><th class="right">Precio</th><th class="center">Acciones</th></tr></thead>
           <tbody id="templatesTableBody"></tbody>
         </table>
-        <div style="text-align:right; margin-top:12px;"><button class="btn" id="closeTemplatesModal">Cerrar</button></div>
+        <div style="text-align:right; margin-top:12px;"><button class="btn" id="closeTemplatesModal" type="button">Cerrar</button></div>
       </div>
     </div>
     <div class="mobile-actions" id="mobileActions" style="display:none;">
@@ -464,7 +464,7 @@
           <thead><tr><th>Nombre</th><th>Teléfono</th><th>Correo</th><th>Dirección</th><th></th></tr></thead>
           <tbody id="clientsTableBody"></tbody>
         </table>
-        <div style="text-align:right; margin-top:12px;"><button class="btn" id="closeClientsModal">Cerrar</button></div>
+        <div style="text-align:right; margin-top:12px;"><button class="btn" id="closeClientsModal" type="button" onclick="(function(){var m=document.getElementById('clientsModal'); if(m){m.classList.remove('active'); document.body.classList.remove('modal-open');}})()">Cerrar</button></div>
       </div>
     </div>
 
@@ -522,7 +522,7 @@
             <input id="importDataInput" type="file" accept="application/json" style="display:none;" />
           </div>
           <div>
-            <button class="btn" id="closeSettingsModal">Cancelar</button>
+            <button class="btn" id="closeSettingsModal" type="button" onclick="(function(){var m=document.getElementById('settingsModal'); if(m){m.classList.remove('active'); document.body.classList.remove('modal-open');}})()">Cancelar</button>
             <button class="btn success" id="saveSettingsModal">Guardar</button>
           </div>
         </div>

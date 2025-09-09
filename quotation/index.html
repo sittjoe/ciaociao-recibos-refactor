@@ -335,8 +335,8 @@
             <input id="importDataInputQ" type="file" accept="application/json" style="display:none;" />
           </div>
           <div>
-            <button class="btn" id="closeSettingsModal">Cancelar</button>
-            <button class="btn success" id="saveSettingsModal">Guardar</button>
+            <button class="btn" id="closeSettingsModal" type="button" onclick="(function(){var m=document.getElementById('settingsModal'); if(m){m.classList.remove('active'); document.body.classList.remove('modal-open');}})()">Cancelar</button>
+            <button class="btn success" id="saveSettingsModal" type="button">Guardar</button>
           </div>
         </div>
       </div>
@@ -352,7 +352,7 @@
           <thead><tr><th>Nombre</th><th>Teléfono</th><th>Correo</th><th>Dirección</th><th></th></tr></thead>
           <tbody id="clientsTableBody"></tbody>
         </table>
-        <div style="text-align:right; margin-top:12px;"><button class="btn" id="closeClientsModal">Cerrar</button></div>
+        <div style="text-align:right; margin-top:12px;"><button class="btn" id="closeClientsModal" type="button" onclick="(function(){var m=document.getElementById('clientsModal'); if(m){m.classList.remove('active'); document.body.classList.remove('modal-open');}})()">Cerrar</button></div>
       </div>
     </div>
 
