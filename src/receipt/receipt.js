@@ -1005,6 +1005,7 @@ async function updateQR(){
   box.innerHTML = '';
   try { new QRCode(box, { text: url, width: 100, height: 100, correctLevel: QRCode.CorrectLevel.M }); } catch {}
   box.dataset.url = url;
+  try { box.setAttribute('title', url); } catch {}
 }
 
 // =============

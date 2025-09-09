@@ -51,9 +51,7 @@
         <div class="footer">© <span id="year"></span> CIAO CIAO MX – Joyería Fina • info@ciaociao.mx</div>
       </div>
     </div>
-    <script type="module">
-      import 'https://cdn.jsdelivr.net/gh/sittjoe/ciaociao-recibos-refactor@main/src/verify/verify.js';
-    </script>
+    <script type="module" src="../src/verify/verify.js"></script>
     <script>
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister()));
