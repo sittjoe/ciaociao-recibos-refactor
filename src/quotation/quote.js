@@ -2,7 +2,6 @@ import { parseMoney, formatNumber, formatMoney, normalizeCurrencyText, normalize
 import { generateQuoteNumber, getCurrentQuoteId, setCurrentQuoteId } from './state.js';
 import { saveQuote, loadQuote, openHistory, closeHistory, searchHistory } from './history.js';
 import { searchTemplates } from '../common/templates.js';
-import { searchTemplates } from '../common/templates.js';
 
 const $ = (s, c = document) => c.querySelector(s);
 const $$ = (s, c = document) => Array.from(c.querySelectorAll(s));
@@ -47,7 +46,13 @@ function recalc() {
   const ivaRate = parseFloat(document.getElementById('ivaRate')?.value || '16') || 16;
   const iva = applyIVA ? base * (ivaRate / 100) : 0;
   $('#iva').textContent = formatNumber(iva);
-  $('#total').textContent = formatMoney(base + iva);
+  const totalVal = base + iva;
+  $('#total').textContent = formatMoney(totalVal);
+  // Update mobile summary (quotation)
+  const msSubtotal = document.getElementById('msSubtotal');
+  const msTotal = document.getElementById('msTotal');
+  if (msSubtotal) msSubtotal.textContent = '$' + formatNumber(subtotal);
+  if (msTotal) msTotal.textContent = formatMoney(totalVal);
 }
 
 function parseLineDiscount(text, base){
@@ -264,6 +269,24 @@ function bindUI() {
   if (closeTplBtn) closeTplBtn.addEventListener('click', closeTemplatesModal);
   const tplSearch = document.getElementById('templatesSearch');
   if (tplSearch) tplSearch.addEventListener('input', e => renderTemplatesTable(e.target.value));
+  // Mobile actions bar (show on small screens and wire actions)
+  const ms = document.getElementById('mobileSummary');
+  const ma = document.getElementById('mobileActions');
+  if (ms && ma) {
+    const updateMobileBars = () => {
+      const show = window.matchMedia('(max-width: 768px)').matches;
+      ms.style.display = show ? 'flex' : 'none';
+      ma.style.display = show ? 'grid' : 'none';
+    };
+    updateMobileBars();
+    // Optional: react to viewport changes
+    try { window.matchMedia('(max-width: 768px)').addEventListener('change', updateMobileBars); } catch {}
+    const add = document.getElementById('ma-add'); if (add) add.addEventListener('click', addRow);
+    const save = document.getElementById('ma-save'); if (save) save.addEventListener('click', saveQuoteAction);
+    const pdf = document.getElementById('ma-pdf'); if (pdf) pdf.addEventListener('click', generatePDF);
+    const png = document.getElementById('ma-png'); if (png) png.addEventListener('click', generatePNG);
+    const extra = document.getElementById('ma-extra'); if (extra) extra.addEventListener('click', convertToReceipt);
+  }
   // Datos modal
   $('#edit-data').addEventListener('click', openDataModal);
   $('#closeDataModal').addEventListener('click', closeDataModal);
