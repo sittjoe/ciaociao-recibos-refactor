@@ -53,7 +53,14 @@ function recalc() {
   const ivaRate = ivaRateEl ? (parseFloat(ivaRateEl.value) || 0) : 16;
   const iva = applyIVA ? baseTotal * (ivaRate / 100) : 0;
   $('#iva').textContent = formatNumber(iva);
-  const total = baseTotal + iva;
+  let total = baseTotal + iva;
+  try {
+    const s = JSON.parse(localStorage.getItem('app_settings')||'{}');
+    if (s && s.totalRound && s.totalRound !== 'none') {
+      const inc = parseFloat(s.totalRound) || 0;
+      if (inc > 0) total = roundToIncrement(total, inc);
+    }
+  } catch {}
   $('#total').textContent = formatMoney(total);
   const anticipo = parseMoney($('#anticipo')?.textContent);
   const saldo = Math.max(total - anticipo, 0);
@@ -75,6 +82,11 @@ function recalc() {
   if (msSubtotal) msSubtotal.textContent = '$' + formatNumber(subtotal);
   if (msTotal) msTotal.textContent = $('#total').textContent;
   if (msSaldo) msSaldo.textContent = $('#saldo').textContent;
+}
+
+function roundToIncrement(value, inc){
+  const r = Math.round(value / inc) * inc;
+  return Math.round(r * 100) / 100;
 }
 
 function parseLineDiscount(text, base){
@@ -887,6 +899,8 @@ function openSettingsModal(){
       if (typeof s.template !== 'undefined') document.getElementById('settingsTemplate').value = s.template;
       if (typeof s.pdfFormat !== 'undefined') document.getElementById('settingsPdfFormat').value = s.pdfFormat;
       if (typeof s.verifyBase !== 'undefined') document.getElementById('settingsVerifyBase').value = s.verifyBase;
+      if (typeof s.lineRound !== 'undefined') document.getElementById('settingsLineRound').value = s.lineRound;
+      if (typeof s.totalRound !== 'undefined') document.getElementById('settingsTotalRound').value = s.totalRound;
     }
   } catch {}
   document.getElementById('settingsModal').classList.add('active');
@@ -899,7 +913,9 @@ function saveSettingsFromModal(){
     validityDays: Math.max(0, parseInt(document.getElementById('settingsValidityDays').value || '30', 10)),
     template: document.getElementById('settingsTemplate').value || 'premium',
     pdfFormat: document.getElementById('settingsPdfFormat').value || 'letter',
-    verifyBase: document.getElementById('settingsVerifyBase').value || ''
+    verifyBase: document.getElementById('settingsVerifyBase').value || '',
+    lineRound: document.getElementById('settingsLineRound').value || 'none',
+    totalRound: document.getElementById('settingsTotalRound').value || 'none'
   };
   try { localStorage.setItem('app_settings', JSON.stringify(s)); } catch {}
   const applyEl = document.getElementById('applyIVA'); if (applyEl) applyEl.checked = s.applyIVA;

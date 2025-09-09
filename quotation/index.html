@@ -36,7 +36,7 @@
       .label{ color:var(--muted); font-size:12px; letter-spacing:.08em; text-transform:uppercase; }
       .value{ font-weight:600; }
       table{ width:100%; border-collapse:collapse; }
-      .items{ overflow:hidden; border:1px solid var(--line); border-radius:14px; background:var(--paper); }
+      .items{ overflow:auto; -webkit-overflow-scrolling:touch; border:1px solid var(--line); border-radius:14px; background:var(--paper); }
       .items thead th{ font-size:12px; letter-spacing:.12em; color:var(--muted); text-transform:uppercase; text-align:left; background:linear-gradient(180deg,#fffdf6,#faf6eb); border-bottom:1px solid var(--line); padding:12px 14px; }
       .items tbody td{ padding:12px 14px; border-bottom:1px dashed #efe9dd; position:relative; }
       .discount-tag{ display:none; margin-left:8px; font-size:11px; color:#dc2626; background:#fff3f3; border:1px solid #f5c2c2; border-radius:8px; padding:2px 6px; }
@@ -73,6 +73,15 @@
       .error-message{ font-size:12px; color:#dc2626; margin-top:4px; }
       .is-invalid{ border-color:#dc2626 !important; box-shadow:0 0 0 2px rgba(220,38,38,.08); }
       @media print{ body{ background:#fff; } .sheet{ margin:0; box-shadow:none; padding:0; } .actions, .btn-back{ display:none !important; } }
+      @media (max-width:768px){
+        .sheet{ margin:16px auto; padding:16px; }
+        .items table{ min-width:720px; }
+        .mobile-summary{ position:fixed; bottom: calc(64px + env(safe-area-inset-bottom)); left:0; right:0; padding:10px 14px; background: rgba(255,255,255,0.98); backdrop-filter:saturate(180%) blur(6px); border-top:1px solid var(--line); display:flex; justify-content:space-between; gap:12px; z-index:1000; }
+        .mobile-summary .item{ font-size:14px; }
+        .mobile-summary .item strong{ font-size:15px; }
+        .mobile-actions{ position:fixed; bottom: env(safe-area-inset-bottom); left:0; right:0; background: linear-gradient(180deg, var(--gold-2), var(--gold-1)); border-top:1px solid var(--gold-3); display:grid; grid-template-columns: repeat(5, 1fr); gap:6px; padding:8px; z-index:1001; }
+        .mobile-actions button{ padding:12px 10px; min-height:44px; border-radius:10px; border:1px solid #a98e5b; background:#fff; color:#5b4a26; font-weight:600; }
+      }
     </style>
   </head>
   <body>
@@ -106,6 +115,19 @@
           <button class="btn" id="closeHistoryModal">Cerrar</button>
         </div>
       </div>
+    </div>
+
+    <!-- Mobile UI -->
+    <div class="mobile-summary" id="mobileSummaryQ" style="display:none;">
+      <div class="item">Subtotal: <strong id="msSubtotalQ">$0.00</strong></div>
+      <div class="item">Total: <strong id="msTotalQ">$0.00</strong></div>
+    </div>
+    <div class="mobile-actions" id="mobileActionsQ" style="display:none;">
+      <button class="btn" id="maq-add">➕</button>
+      <button class="btn" id="maq-save">💾</button>
+      <button class="btn" id="maq-pdf">📥</button>
+      <button class="btn" id="maq-png">🖼️</button>
+      <button class="btn" id="maq-to-receipt">↪</button>
     </div>
 
     <!-- Modal de datos (cliente y fechas) -->

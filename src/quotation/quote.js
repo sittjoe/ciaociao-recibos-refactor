@@ -103,8 +103,9 @@ function collectQuoteData() {
         description: cells[0]?.textContent || '',
         qty: cells[1]?.textContent || '',
         price: cells[2]?.textContent || '',
-        subtotal: cells[3]?.textContent || '',
-        sku: cells[4]?.textContent || '',
+        discount: cells[3]?.textContent || '0',
+        subtotal: cells[4]?.textContent || '',
+        sku: cells[5]?.textContent || '',
       };
     }),
     totals: {
