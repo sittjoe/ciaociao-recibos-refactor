@@ -15,7 +15,7 @@ export function getTemplates() {
     if (!raw) return DEFAULT_TEMPLATES.slice();
     const arr = JSON.parse(raw);
     if (Array.isArray(arr) && arr.length) return arr;
-  } catch {}
+  } catch (e) { void e; }
   return DEFAULT_TEMPLATES.slice();
 }
 
@@ -29,7 +29,7 @@ export function searchTemplates(query) {
 }
 
 export function saveTemplates(list) {
-  try { localStorage.setItem('item_templates', JSON.stringify(list)); } catch {}
+  try { localStorage.setItem('item_templates', JSON.stringify(list)); } catch (e) { void e; }
 }
 
 export function upsertTemplate(tpl) {
@@ -57,7 +57,6 @@ export function exportTemplatesCSV() {
 export function importTemplatesCSV(text) {
   const lines = String(text).split(/\r?\n/).filter(Boolean);
   if (!lines.length) return;
-  const header = lines[0].toLowerCase();
   const out = [];
   for (let i=1;i<lines.length;i++){
     const cols = parseCSVLine(lines[i]);

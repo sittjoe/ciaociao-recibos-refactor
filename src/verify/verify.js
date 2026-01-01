@@ -8,14 +8,6 @@ function b64urlToBytes(b64url) {
 }
 
 function bytesToHex(buf){ return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join(''); }
-function hexToB64url(hex){
-  const bytes = new Uint8Array(hex.length/2);
-  for (let i=0;i<hex.length;i+=2) bytes[i/2] = parseInt(hex.slice(i,i+2),16);
-  let bin = '';
-  for (let i=0;i<bytes.length;i++) bin += String.fromCharCode(bytes[i]);
-  const b64 = btoa(bin).replace(/=+$/,'').replace(/\+/g,'-').replace(/\//g,'_');
-  return b64;
-}
 
 async function sha256Hex(text){
   const enc = new TextEncoder();
@@ -27,7 +19,7 @@ function setValue(id, val){ const el = document.getElementById(id); if (el) el.t
 
 function getSecret(){
   // Permite override por localStorage para instalaciones privadas
-  try { const custom = localStorage.getItem('qr_secret'); if (custom) return custom; } catch {}
+  try { const custom = localStorage.getItem('qr_secret'); if (custom) return custom; } catch (e) { void e; }
   return 'CCMX-QR-2025';
 }
 
@@ -56,7 +48,7 @@ async function main(){
   }
 
   document.getElementById('copyUrl').addEventListener('click', async ()=>{
-    try { await navigator.clipboard.writeText(window.location.href); } catch {}
+    try { await navigator.clipboard.writeText(window.location.href); } catch (e) { void e; }
   });
   document.getElementById('openHome').addEventListener('click', ()=>{
     const parts = location.pathname.split('/'); parts.pop(); parts.pop();

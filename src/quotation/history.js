@@ -1,3 +1,5 @@
+import { getDateTimestamp } from '../common/dates.js';
+
 const STORAGE_KEY = 'quotations_ciaociao';
 let sortDir = localStorage.getItem('quotes_sort_dir') || 'desc';
 
@@ -24,39 +26,63 @@ export function deleteQuote(id) {
 function sortByDate(arr){
   const copy = arr.slice();
   copy.sort((a,b)=>{
-    const da = new Date(a?.dates?.issue || a?.date || 0).getTime();
-    const db = new Date(b?.dates?.issue || b?.date || 0).getTime();
+    const da = getQuoteDateTs(a);
+    const db = getQuoteDateTs(b);
     return sortDir === 'asc' ? da - db : db - da;
   });
   return copy;
 }
 
+function getQuoteDateTs(q) {
+  return getDateTimestamp(q?.dates?.issueISO)
+    || getDateTimestamp(q?.dates?.issue)
+    || getDateTimestamp(q?.date)
+    || 0;
+}
+
+function createCell(text) {
+  const td = document.createElement('td');
+  td.textContent = text == null ? '' : String(text);
+  return td;
+}
+
+function createActionButton(label, action, id) {
+  const btn = document.createElement('button');
+  btn.textContent = label;
+  btn.dataset.action = action;
+  btn.dataset.id = id;
+  return btn;
+}
+
+function buildRow(q) {
+  const tr = document.createElement('tr');
+  tr.appendChild(createCell(q.number));
+  tr.appendChild(createCell(q.dates?.issue || ''));
+  tr.appendChild(createCell(q.client?.name || ''));
+  tr.appendChild(createCell(q.totals?.total || ''));
+  tr.appendChild(createCell(q.status || 'pendiente'));
+  const actions = document.createElement('td');
+  actions.appendChild(createActionButton('Cargar', 'load', q.id));
+  actions.appendChild(createActionButton('Eliminar', 'delete', q.id));
+  tr.appendChild(actions);
+  return tr;
+}
+
 export function renderHistoryTable(onLoad) {
   const tbody = document.getElementById('historyTableBody');
-  tbody.innerHTML = '';
-  sortByDate(listQuotes()).forEach(q => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${q.number}</td>
-      <td>${q.dates?.issue || ''}</td>
-      <td>${q.client?.name || ''}</td>
-      <td>${q.totals?.total || ''}</td>
-      <td>${q.status || 'pendiente'}</td>
-      <td>
-        <button data-action="load" data-id="${q.id}">Cargar</button>
-        <button data-action="delete" data-id="${q.id}">Eliminar</button>
-      </td>`;
-    tbody.appendChild(tr);
-  });
+  tbody.replaceChildren();
+  const frag = document.createDocumentFragment();
+  sortByDate(listQuotes()).forEach(q => frag.appendChild(buildRow(q)));
+  tbody.appendChild(frag);
 
-  tbody.addEventListener('click', (e) => {
-    const btn = e.target.closest('button');
+  tbody.onclick = (e) => {
+    const btn = e.target.closest('button[data-action]');
     if (!btn) return;
     const id = btn.getAttribute('data-id');
     const action = btn.getAttribute('data-action');
     if (action === 'load') onLoad(id);
     if (action === 'delete') { deleteQuote(id); renderHistoryTable(onLoad); }
-  }, { once: true });
+  };
 
   const sortTh = document.getElementById('quoteHistorySortDate');
   const dirSpan = document.getElementById('quoteHistorySortDateDir');
@@ -75,41 +101,34 @@ export function searchHistory(query) {
   const tbody = document.getElementById('historyTableBody');
   const from = document.getElementById('historyFrom')?.value;
   const to = document.getElementById('historyTo')?.value;
+  const fromTs = from ? getDateTimestamp(from) : 0;
+  const toTs = to ? getDateTimestamp(to) + (24 * 60 * 60 * 1000 - 1) : 0;
   const filtered = sortByDate(listQuotes()).filter(x => (x.number || '').toLowerCase().includes(q)
     || (x.client?.name || '').toLowerCase().includes(q)
     || (x.dates?.issue || '').toLowerCase().includes(q)).filter(x => {
-      const d = new Date(x?.dates?.issue || x?.date || 0);
-      if (from && d < new Date(from)) return false;
-      if (to && d > new Date(to)) return false;
+      const d = getQuoteDateTs(x);
+      if (from && d < fromTs) return false;
+      if (to && d > toTs) return false;
       return true;
     });
-  tbody.innerHTML = '';
-  filtered.forEach(x => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${x.number}</td>
-      <td>${x.dates?.issue || ''}</td>
-      <td>${x.client?.name || ''}</td>
-      <td>${x.totals?.total || ''}</td>
-      <td>${x.status || 'pendiente'}</td>
-      <td>
-        <button data-action="load" data-id="${x.id}">Cargar</button>
-        <button data-action="delete" data-id="${x.id}">Eliminar</button>
-      </td>`;
-    tbody.appendChild(tr);
-  });
+  tbody.replaceChildren();
+  const frag = document.createDocumentFragment();
+  filtered.forEach(x => frag.appendChild(buildRow(x)));
+  tbody.appendChild(frag);
 }
 
 export function exportHistoryCSV() {
   const q = document.getElementById('searchHistory')?.value || '';
   const from = document.getElementById('historyFrom')?.value;
   const to = document.getElementById('historyTo')?.value;
+  const fromTs = from ? getDateTimestamp(from) : 0;
+  const toTs = to ? getDateTimestamp(to) + (24 * 60 * 60 * 1000 - 1) : 0;
   const items = sortByDate(listQuotes()).filter(x => (x.number || '').toLowerCase().includes(q.toLowerCase())
     || (x.client?.name || '').toLowerCase().includes(q.toLowerCase())
     || (x.dates?.issue || '').toLowerCase().includes(q.toLowerCase())).filter(x => {
-      const d = new Date(x?.dates?.issue || x?.date || 0);
-      if (from && d < new Date(from)) return false;
-      if (to && d > new Date(to)) return false;
+      const d = getQuoteDateTs(x);
+      if (from && d < fromTs) return false;
+      if (to && d > toTs) return false;
       return true;
     });
   const rows = [ ['Folio','Fecha','Cliente','Total','Estatus'] ];

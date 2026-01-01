@@ -1,11 +1,16 @@
+/* global html2canvas, QRCode, DOMPurify */
 import { parseMoney, formatNumber, formatMoney, normalizeCurrencyText, normalizeIntegerText } from './money.js';
-import { generateReceiptNumber, getCurrentReceiptId, setCurrentReceiptId, getSignatures, setSignature, clearSignature as clearSigState, resetSignatures } from './state.js';
+import { generateReceiptNumber, getCurrentReceiptId, setCurrentReceiptId, getSignatures, setSignature, resetSignatures } from './state.js';
 import { initSignature, openSignatureModal, closeSignatureModal, clearModalSignature, saveSignatureToTarget, clearSignature } from './signature.js';
 import { saveReceipt, loadReceipt, openHistory, closeHistory, searchHistory } from './history.js';
 import { getTemplates, searchTemplates, exportTemplatesCSV, importTemplatesCSV, upsertTemplate, removeTemplate } from '../common/templates.js';
+import { setDateEl, getISODateFromEl, parseDateString } from '../common/dates.js';
 
 const $ = (s, c = document) => c.querySelector(s);
 const $$ = (s, c = document) => Array.from(c.querySelectorAll(s));
+let uiBound = false;
+let inited = false;
+let onReceiptSaved = null;
 
 // Action notifications (with optional undo)
 let lastActionCleanup = null;
@@ -14,7 +19,7 @@ function showActionNotification(message, { actionLabel, onAction, type = 'succes
   const messageEl = $('#notification-message');
   if (!notification || !messageEl) return;
   // Clean previous
-  if (lastActionCleanup) { try { lastActionCleanup(); } catch {} lastActionCleanup = null; }
+  if (lastActionCleanup) { try { lastActionCleanup(); } catch (e) { void e; } lastActionCleanup = null; }
   // Render message + optional action button
   messageEl.textContent = message;
   let btn = notification.querySelector('button._action');
@@ -46,11 +51,6 @@ function showNotification(message, type = 'success') {
   setTimeout(() => notification.classList.remove('show'), 3000);
 }
 
-function sanitizeEditable(el) {
-  // Sanitización básica para contentEditable (solo texto)
-  el.innerText = el.innerText.replace(/[\u0000-\u001F]/g, '').trim();
-}
-
 function recalc() {
   let subtotal = 0;
   let lineDiscTotal = 0;
@@ -67,7 +67,7 @@ function recalc() {
         const inc = parseFloat(s.lineRound) || 0;
         if (inc > 0) net = roundToIncrement(net, inc);
       }
-    } catch {}
+    } catch (e) { void e; }
     $('.subtotal', tr).textContent = formatNumber(net);
     subtotal += net;
     lineDiscTotal += disc;
@@ -99,7 +99,7 @@ function recalc() {
       const inc = parseFloat(s.totalRound) || 0;
       if (inc > 0) total = roundToIncrement(total, inc);
     }
-  } catch {}
+  } catch (e) { void e; }
   $('#total').textContent = formatMoney(total);
   const anticipo = parseMoney($('#anticipo')?.textContent);
   const saldo = Math.max(total - anticipo, 0);
@@ -132,7 +132,7 @@ function parseLineDiscount(text, base){
   const t = String(text).trim();
   if (!t) return 0;
   if (/%$/.test(t)) {
-    const p = parseFloat(t.replace(/[^0-9.\-]/g,'')) || 0;
+    const p = parseFloat(t.replace(/[^0-9.-]/g, '')) || 0;
     const pct = Math.min(Math.max(p, 0), 100);
     return base * (pct/100);
   }
@@ -140,34 +140,101 @@ function parseLineDiscount(text, base){
   return Math.min(Math.max(val, 0), base);
 }
 
-function addRow() {
+function createCell(text, className) {
+  const td = document.createElement('td');
+  if (className) td.className = className;
+  td.textContent = text == null ? '' : String(text);
+  return td;
+}
+
+function createEditableCell(text, className) {
+  const td = createCell(text, className);
+  td.contentEditable = 'true';
+  return td;
+}
+
+function createItemTypeSelect(value) {
+  const select = document.createElement('select');
+  select.className = 'transaction-type-select item-type';
+  select.style.fontSize = '11px';
+  select.style.padding = '4px';
+  [
+    { value: 'producto', label: 'Producto' },
+    { value: 'servicio', label: 'Servicio' },
+    { value: 'reparacion', label: 'Reparación' }
+  ].forEach(opt => {
+    const option = document.createElement('option');
+    option.value = opt.value;
+    option.textContent = opt.label;
+    if (opt.value === value) option.selected = true;
+    select.appendChild(option);
+  });
+  return select;
+}
+
+function createRowActionButton(text, action, title, className) {
+  const btn = document.createElement('button');
+  if (className) btn.className = className;
+  if (title) btn.title = title;
+  btn.textContent = text;
+  btn.dataset.action = action;
+  return btn;
+}
+
+function buildItemRow(item = {}) {
+  const {
+    description = 'Artículo de joyería',
+    qty = '1',
+    price = '0.00',
+    discount = '0',
+    subtotal = '0.00',
+    sku = '—',
+    type = 'producto'
+  } = item;
+
   const tr = document.createElement('tr');
-  tr.innerHTML = `
-    <td class="editable" contenteditable>Artículo de joyería</td>
-    <td class="center editable qty" contenteditable>1</td>
-    <td class="right editable price" contenteditable>0.00</td>
-    <td class="right editable line-discount" contenteditable>0</td>
-    <td class="right subtotal">0.00</td>
-    <td class="center editable" contenteditable>—</td>
-    <td class="center">
-      <select class="transaction-type-select item-type" style="font-size:11px; padding:4px;">
-        <option value="producto">Producto</option>
-        <option value="servicio">Servicio</option>
-        <option value="reparacion">Reparación</option>
-      </select>
-    </td>
-    <td class="center" style="position:relative; white-space:nowrap;">
-      <button class="delete-row" title="Eliminar" data-action="delete-row">×</button>
-      <button class="btn" style="padding:4px 6px; font-size:12px;" title="Duplicar" data-action="row-dup">⎘</button>
-      <button class="btn" style="padding:4px 6px; font-size:12px;" title="Subir" data-action="row-up">↑</button>
-      <button class="btn" style="padding:4px 6px; font-size:12px;" title="Bajar" data-action="row-down">↓</button>
-    </td>`;
+  tr.appendChild(createEditableCell(description, 'editable'));
+  tr.appendChild(createEditableCell(qty, 'center editable qty'));
+  tr.appendChild(createEditableCell(price, 'right editable price'));
+  tr.appendChild(createEditableCell(discount, 'right editable line-discount'));
+  tr.appendChild(createCell(subtotal, 'right subtotal'));
+  tr.appendChild(createEditableCell(sku, 'center editable'));
+
+  const typeTd = document.createElement('td');
+  typeTd.className = 'center';
+  typeTd.appendChild(createItemTypeSelect(type));
+  tr.appendChild(typeTd);
+
+  const actionsTd = document.createElement('td');
+  actionsTd.className = 'center';
+  actionsTd.style.position = 'relative';
+  actionsTd.style.whiteSpace = 'nowrap';
+  const del = createRowActionButton('×', 'delete-row', 'Eliminar', 'delete-row');
+  const dup = createRowActionButton('⎘', 'row-dup', 'Duplicar', 'btn');
+  const up = createRowActionButton('↑', 'row-up', 'Subir', 'btn');
+  const down = createRowActionButton('↓', 'row-down', 'Bajar', 'btn');
+  [dup, up, down].forEach(b => { b.style.padding = '4px 6px'; b.style.fontSize = '12px'; });
+  actionsTd.appendChild(del);
+  actionsTd.appendChild(dup);
+  actionsTd.appendChild(up);
+  actionsTd.appendChild(down);
+  tr.appendChild(actionsTd);
+
+  return tr;
+}
+
+function addRow() {
+  const tr = buildItemRow();
   $('#itemsBody').appendChild(tr);
-  tr.querySelector('.editable').focus();
+  const first = tr.querySelector('.editable');
+  if (first) first.focus();
   showNotification('Producto agregado', 'success');
 }
 
 function collectReceiptData() {
+  const issueEl = $('#issueDate');
+  const deliveryEl = $('#deliveryDate');
+  const validEl = $('#validUntil');
   return {
     id: getCurrentReceiptId(),
     number: $('#receiptNumber').textContent,
@@ -182,9 +249,12 @@ function collectReceiptData() {
       address: $('#clientAddress').textContent,
     },
     dates: {
-      issue: $('#issueDate').textContent,
-      delivery: $('#deliveryDate').textContent,
-      validUntil: $('#validUntil').textContent,
+      issue: issueEl?.textContent || '',
+      issueISO: getISODateFromEl(issueEl),
+      delivery: deliveryEl?.textContent || '',
+      deliveryISO: getISODateFromEl(deliveryEl),
+      validUntil: validEl?.textContent || '',
+      validUntilISO: getISODateFromEl(validEl),
     },
     items: $$('#tabla-items tbody tr').map(tr => {
       const cells = Array.from(tr.querySelectorAll('td'));
@@ -218,6 +288,7 @@ function saveReceiptAction() {
   saveReceipt(data);
   updateQR();
   showNotification('Recibo guardado', 'success');
+  if (typeof onReceiptSaved === 'function') onReceiptSaved();
 }
 
 function loadReceiptAction(id) {
@@ -232,27 +303,20 @@ function loadReceiptAction(id) {
   $('#clientPhone').textContent = r.client?.phone || '';
   $('#clientEmail').textContent = r.client?.email || '';
   $('#clientAddress').textContent = r.client?.address || '';
-  $('#issueDate').textContent = r.dates?.issue || '';
-  $('#deliveryDate').textContent = r.dates?.delivery || '';
-  $('#validUntil').textContent = r.dates?.validUntil || '';
-  $('#itemsBody').innerHTML = '';
+  applyStoredDate($('#issueDate'), r.dates?.issue, r.dates?.issueISO);
+  applyStoredDate($('#deliveryDate'), r.dates?.delivery, r.dates?.deliveryISO);
+  applyStoredDate($('#validUntil'), r.dates?.validUntil, r.dates?.validUntilISO);
+  $('#itemsBody').replaceChildren();
   (r.items || []).forEach(it => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td class="editable" contenteditable>${it.description}</td>
-      <td class="center editable qty" contenteditable>${it.qty}</td>
-      <td class="right editable price" contenteditable>${it.price}</td>
-      <td class="right editable line-discount" contenteditable>${it.discount || '0'}</td>
-      <td class="right subtotal">${it.subtotal}</td>
-      <td class="center editable" contenteditable>${it.sku}</td>
-      <td class="center">
-        <select class="transaction-type-select item-type" style="font-size:11px; padding:4px;">
-          <option value="producto" ${it.type === 'producto' ? 'selected' : ''}>Producto</option>
-          <option value="servicio" ${it.type === 'servicio' ? 'selected' : ''}>Servicio</option>
-          <option value="reparacion" ${it.type === 'reparacion' ? 'selected' : ''}>Reparación</option>
-        </select>
-      </td>
-      <td style="position:relative;"><span class="delete-row" data-action="delete-row">×</span></td>`;
+    const tr = buildItemRow({
+      description: it.description || '',
+      qty: it.qty || '1',
+      price: it.price || '0.00',
+      discount: it.discount || '0',
+      subtotal: it.subtotal || '0.00',
+      sku: it.sku || '',
+      type: it.type || 'producto'
+    });
     $('#itemsBody').appendChild(tr);
   });
   $('#descuento').textContent = r.totals?.discount || '0.00';
@@ -278,7 +342,7 @@ function loadReceiptAction(id) {
 
 function newReceipt() {
   resetSignatures();
-  $('#itemsBody').innerHTML = '';
+  $('#itemsBody').replaceChildren();
   addRow();
   $('#descuento').textContent = '0.00';
   $('#aportacion').textContent = '0.00';
@@ -289,26 +353,34 @@ function newReceipt() {
   const on = document.getElementById('orderNumber'); if (on) on.textContent = '001';
   const now = new Date();
   const valid = new Date(now); valid.setDate(valid.getDate() + 30);
-  $('#issueDate').textContent = formatDate(now);
-  $('#deliveryDate').textContent = formatDate(now);
-  $('#validUntil').textContent = formatDate(valid);
+  setDateEl($('#issueDate'), now);
+  setDateEl($('#deliveryDate'), now);
+  setDateEl($('#validUntil'), valid);
   recalc();
   // Asegurar QR visible en nuevos recibos
   updateQR();
 }
 
-function formatDate(date) {
-  const months = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-  return `${date.getDate()} de ${months[date.getMonth()]} de ${date.getFullYear()}`;
+function applyStoredDate(el, displayText, isoText) {
+  if (!el) return;
+  const parsed = parseDateString(isoText || displayText);
+  if (parsed) {
+    setDateEl(el, parsed);
+    return;
+  }
+  el.textContent = displayText || '';
+  if (el.dataset) delete el.dataset.iso;
 }
 
 async function generatePDF() {
+  let endExport;
+  let restoreLogo;
   try {
     showNotification('Generando PDF...', 'info');
     saveReceiptAction();
     updateQR();
-    const endExport = await exportStart();
-    const restoreLogo = await ensureExportLogo();
+    endExport = await exportStart();
+    restoreLogo = await ensureExportLogo();
     await waitFor(() => document.getElementById('qrBox')?.children.length > 0, 600);
     $$('.delete-row, .clear-sig, .actions, .watermark, .btn-back').forEach(el => { if (el) el.style.display = 'none'; });
     const element = document.querySelector('.gilded-frame');
@@ -339,8 +411,8 @@ async function generatePDF() {
   } catch (e) {
     console.error(e); showNotification('Error al generar PDF', 'error');
   } finally {
-    try { restoreLogo && restoreLogo(); } catch {}
-    endExport && endExport();
+    try { if (restoreLogo) restoreLogo(); } catch (e) { void e; }
+    if (endExport) endExport();
   }
 }
 
@@ -362,7 +434,7 @@ function shareWhatsApp() {
     try {
       const verifyUrl = await buildVerifyUrl();
       msg += `\nVerificar: ${verifyUrl}`;
-    } catch {}
+    } catch (e) { void e; }
     const phone = (r.client.phone || '').replace(/\D/g, '');
     const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
     window.open(url, '_blank');
@@ -371,11 +443,13 @@ function shareWhatsApp() {
 }
 
 async function generatePNG() {
+  let endExport;
+  let restoreLogo;
   try {
     showNotification('Generando PNG...', 'info');
     updateQR();
-    const endExport = await exportStart();
-    const restoreLogo = await ensureExportLogo();
+    endExport = await exportStart();
+    restoreLogo = await ensureExportLogo();
     await waitFor(() => document.getElementById('qrBox')?.children.length > 0, 600);
     // Ocultar elementos no deseados
     const toHide = $$('.delete-row, .clear-sig, .actions, .btn-back, .mobile-actions, .mobile-summary, .watermark');
@@ -392,13 +466,14 @@ async function generatePNG() {
     showNotification('PNG generado', 'success');
   } catch (e) { console.error(e); showNotification('Error al generar PNG','error'); }
   finally {
-    try { restoreLogo && restoreLogo(); } catch {}
-    endExport && endExport();
+    try { if (restoreLogo) restoreLogo(); } catch (e) { void e; }
+    if (endExport) endExport();
   }
 }
 
 function bindUI() {
-  try { console.log('[receipt] bindUI'); } catch {}
+  if (uiBound) return;
+  uiBound = true;
   const yearEl = $('#year'); if (yearEl) yearEl.textContent = new Date().getFullYear();
   $('#add-row').addEventListener('click', addRow);
   $('#save-receipt').addEventListener('click', saveReceiptAction);
@@ -451,7 +526,7 @@ function bindUI() {
       const url = document.getElementById('qrBox').dataset.url || '';
       await navigator.clipboard.writeText(url);
       showNotification('Enlace copiado', 'success');
-    } catch { showNotification('No se pudo copiar', 'error'); }
+    } catch (e) { void e; showNotification('No se pudo copiar', 'error'); }
   });
   // Datos modal
   $('#edit-data').addEventListener('click', openDataModal);
@@ -491,9 +566,6 @@ function bindUI() {
   const saveSettingsBtn = document.getElementById('saveSettingsModal');
   if (saveSettingsBtn) saveSettingsBtn.addEventListener('click', saveSettingsFromModal);
 
-  // Support Undo on delete
-  let lastDeleted = null;
-
   document.body.addEventListener('click', e => {
     const del = e.target.closest('[data-action="delete-row"]');
     if (del) {
@@ -505,14 +577,12 @@ function bindUI() {
         const clone = tr.cloneNode(true);
         tr.remove();
         recalc();
-        lastDeleted = { tbody, clone, idx };
         showActionNotification('Producto eliminado', {
           actionLabel: 'Deshacer',
           onAction: () => {
             const children = tbody.children;
             if (idx >= 0 && idx < children.length) tbody.insertBefore(clone, children[idx]); else tbody.appendChild(clone);
             recalc();
-            lastDeleted = null;
           },
           type: 'info', duration: 5000
         });
@@ -569,7 +639,7 @@ function bindUI() {
     if (t.matches('.line-discount')) {
       const raw = (t.textContent||'').trim();
       if (/%$/.test(raw)) {
-        const p = Math.min(Math.max(parseFloat(raw.replace(/[^0-9.\-]/g,'')||'0'),0),100);
+        const p = Math.min(Math.max(parseFloat(raw.replace(/[^0-9.-]/g, '') || '0'), 0), 100);
         t.textContent = `${p}%`;
       } else {
         t.textContent = normalizeCurrencyText(raw||'0', { min: 0 });
@@ -622,17 +692,18 @@ function bindUI() {
       document.getElementById('settingsVerifyBase').value = '';
       document.getElementById('settingsLineRound').value = 'none';
       document.getElementById('settingsTotalRound').value = 'none';
-    } catch {}
+    } catch (e) { void e; }
   });
 }
 
 function openTicketPreview(){
-  try { localStorage.setItem('ticket_preview_data', JSON.stringify(collectReceiptData())); } catch {}
+  try { localStorage.setItem('ticket_preview_data', JSON.stringify(collectReceiptData())); } catch (e) { void e; }
   window.location.href = '../ticket/index.html';
 }
 
 function init() {
-  try { console.log('[receipt] init start'); } catch {}
+  if (inited) return;
+  inited = true;
   // Load defaults
   try {
     const s = JSON.parse(localStorage.getItem('app_settings')||'{}');
@@ -645,24 +716,23 @@ function init() {
       let changed = false;
       if (!('verifyBase' in s)) { s.verifyBase = 'https://recibos.ciaociao.mx'; changed = true; }
       if (!('verifyPath' in s)) { s.verifyPath = '/verify/index.html'; changed = true; }
-      if (changed) { try { localStorage.setItem('app_settings', JSON.stringify(s)); } catch {} }
+      if (changed) { try { localStorage.setItem('app_settings', JSON.stringify(s)); } catch (e) { void e; } }
       if (typeof s.validityDays === 'number') {
         const now = new Date(); const v = new Date(now); v.setDate(v.getDate() + s.validityDays);
-        $('#validUntil').textContent = formatDate(v);
+        setDateEl($('#validUntil'), v);
       }
       if (s.template === 'simple') document.body.classList.add('simple');
     }
-  } catch {}
+  } catch (e) { void e; }
   const number = generateReceiptNumber();
   $('#receiptNumber').textContent = number;
   setCurrentReceiptId(`receipt_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`);
   const now = new Date(); const valid = new Date(now); valid.setDate(valid.getDate() + 30);
-  $('#issueDate').textContent = formatDate(now);
-  $('#deliveryDate').textContent = formatDate(now);
-  $('#validUntil').textContent = formatDate(valid);
+  setDateEl($('#issueDate'), now);
+  setDateEl($('#deliveryDate'), now);
+  setDateEl($('#validUntil'), valid);
   initSignature(document.getElementById('signatureCanvas'));
   recalc();
-  try { console.log('[receipt] init after recalc, folio:', document.getElementById('receiptNumber')?.textContent); } catch {}
   // Generar QR desde el inicio para evitar caja vacía
   updateQR();
   setInterval(() => { if ($('#receiptNumber').textContent !== '---') saveReceiptAction(); }, 30000);
@@ -670,9 +740,7 @@ function init() {
   // Warn on unsaved changes
   let dirty = false;
   document.addEventListener('input', () => { dirty = true; }, { capture: true });
-  const markSaved = () => { dirty = false; };
-  const _save = saveReceiptAction;
-  saveReceiptAction = function(){ _save(); markSaved(); };
+  onReceiptSaved = () => { dirty = false; };
   window.addEventListener('beforeunload', (e) => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
 }
 
@@ -699,30 +767,24 @@ function prefillFromQuoteIfPresent() {
       $('#clientAddress').textContent = data.client.address || $('#clientAddress').textContent;
     }
     if (Array.isArray(data.items) && data.items.length) {
-      $('#itemsBody').innerHTML = '';
+      $('#itemsBody').replaceChildren();
       data.items.forEach(it => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td class="editable" contenteditable>${it.description}</td>
-          <td class="center editable qty" contenteditable>${it.qty}</td>
-          <td class="right editable price" contenteditable>${it.price}</td>
-          <td class="right subtotal">${it.subtotal}</td>
-          <td class="center editable" contenteditable>${it.sku || ''}</td>
-          <td class="center">
-            <select class="transaction-type-select item-type" style="font-size:11px; padding:4px;">
-              <option value="producto" selected>Producto</option>
-              <option value="servicio">Servicio</option>
-              <option value="reparacion">Reparación</option>
-            </select>
-          </td>
-          <td style="position:relative;"><span class="delete-row" data-action="delete-row">×</span></td>`;
+        const tr = buildItemRow({
+          description: it.description || '',
+          qty: it.qty || '1',
+          price: it.price || '0.00',
+          discount: it.discount || '0',
+          subtotal: it.subtotal || '0.00',
+          sku: it.sku || '',
+          type: it.type || 'producto'
+        });
         $('#itemsBody').appendChild(tr);
       });
     }
     if (data?.discount) $('#descuento').textContent = data.discount;
     recalc();
     showNotification('Datos precargados desde cotización','success');
-  } catch {}
+  } catch (e) { void e; }
 }
 
 // Call after init has laid out the base UI
@@ -738,16 +800,9 @@ function openDataModal() {
   $('#formClientEmail').value = $('#clientEmail').textContent.trim();
   $('#formClientAddress').value = $('#clientAddress').textContent.trim();
   clearAllErrors('#dataModal');
-  // Convertir fechas mostradas a YYYY-MM-DD si posible (heurística muy simple)
-  const parseShown = (txt) => {
-    // Intenta Date.parse directo o deja vacío
-    const d = new Date(txt);
-    if (!isNaN(d)) return d.toISOString().slice(0,10);
-    return '';
-  };
-  $('#formIssueDate').value = parseShown($('#issueDate').textContent);
-  $('#formDeliveryDate').value = parseShown($('#deliveryDate').textContent);
-  $('#formValidUntil').value = parseShown($('#validUntil').textContent);
+  $('#formIssueDate').value = getISODateFromEl($('#issueDate'));
+  $('#formDeliveryDate').value = getISODateFromEl($('#deliveryDate'));
+  $('#formValidUntil').value = getISODateFromEl($('#validUntil'));
   $('#dataModal').classList.add('active');
 }
 function closeDataModal() { $('#dataModal').classList.remove('active'); }
@@ -770,20 +825,27 @@ function saveDataFromModal() {
   const issue = issueInput.value;
   const delivery = deliveryInput.value;
   const validUntil = validInput.value;
+  const issueDate = parseDateString(issue);
+  const validDate = parseDateString(validUntil);
 
   if (!name) { setFieldError(nameInput, 'Nombre requerido'); valid = false; }
   if (phone && phone.replace(/\D/g,'').length < 8) { setFieldError(phoneInput, 'Teléfono inválido'); valid = false; }
   if (email && !/^\S+@\S+\.\S+$/.test(email)) { setFieldError(emailInput, 'Correo inválido'); valid = false; }
-  if (issue && validUntil && new Date(validUntil) < new Date(issue)) { setFieldError(validInput, '“Válido hasta” debe ser posterior'); valid = false; }
+  if (issueDate && validDate && validDate < issueDate) { setFieldError(validInput, '“Válido hasta” debe ser posterior'); valid = false; }
   if (!valid) return;
   $('#clientName').textContent = name;
   $('#clientPhone').textContent = phone || $('#clientPhone').textContent;
   $('#clientEmail').textContent = email || $('#clientEmail').textContent;
   $('#clientAddress').textContent = address || $('#clientAddress').textContent;
-  const fmt = (s)=> s? formatDate(new Date(s)) : '';
-  if (issue) $('#issueDate').textContent = fmt(issue);
-  if (delivery) $('#deliveryDate').textContent = fmt(delivery);
-  if (validUntil) $('#validUntil').textContent = fmt(validUntil);
+  const setFromInput = (el, value) => {
+    const parsed = parseDateString(value);
+    if (parsed) { setDateEl(el, parsed); return; }
+    const d = new Date(value);
+    if (!Number.isNaN(d.getTime())) setDateEl(el, d);
+  };
+  if (issue) setFromInput($('#issueDate'), issue);
+  if (delivery) setFromInput($('#deliveryDate'), delivery);
+  if (validUntil) setFromInput($('#validUntil'), validUntil);
   closeDataModal();
   saveReceiptAction();
 }
@@ -817,21 +879,15 @@ function saveItemFromModal(){
   if (!desc) { setFieldError(descInput, 'Descripción requerida'); ok = false; }
   if (!ok) return;
   qty = Math.max(1, qty); price = Math.max(0, price);
-  const tr = document.createElement('tr');
-  tr.innerHTML = `
-    <td class="editable" contenteditable>${desc}</td>
-    <td class="center editable qty" contenteditable>${qty}</td>
-    <td class="right editable price" contenteditable>${price.toFixed(2)}</td>
-    <td class="right subtotal">0.00</td>
-    <td class="center editable" contenteditable>${sku}</td>
-    <td class="center">
-      <select class="transaction-type-select item-type" style="font-size:11px; padding:4px;">
-        <option value="producto" ${type==='producto'?'selected':''}>Producto</option>
-        <option value="servicio" ${type==='servicio'?'selected':''}>Servicio</option>
-        <option value="reparacion" ${type==='reparacion'?'selected':''}>Reparación</option>
-      </select>
-    </td>
-    <td style="position:relative;"><span class="delete-row" data-action="delete-row">×</span></td>`;
+  const tr = buildItemRow({
+    description: desc,
+    qty: String(qty),
+    price: price.toFixed(2),
+    discount: '0',
+    subtotal: '0.00',
+    sku,
+    type
+  });
   $('#itemsBody').appendChild(tr);
   recalc();
   closeItemModal();
@@ -849,11 +905,6 @@ function setFieldError(input, message){
   }
   msg.textContent = message;
 }
-function clearFieldError(input){
-  input.classList.remove('is-invalid');
-  const msg = input.nextElementSibling;
-  if (msg && msg.classList && msg.classList.contains('error-message')) msg.textContent = '';
-}
 function clearAllErrors(scope){
   const root = typeof scope === 'string' ? document.querySelector(scope) : scope;
   if (!root) return;
@@ -865,7 +916,7 @@ function clearAllErrors(scope){
 async function ensureExportLogo(){
   const img = document.querySelector('.brand img');
   if (!img) return () => {};
-  try { img.crossOrigin = 'anonymous'; img.setAttribute('crossorigin','anonymous'); } catch {}
+  try { img.crossOrigin = 'anonymous'; img.setAttribute('crossorigin','anonymous'); } catch (e) { void e; }
   const original = img.src;
   // If image naturalWidth is 0, or cross-origin likely to fail, replace with inline SVG text
   let replaced = false;
@@ -878,7 +929,7 @@ async function ensureExportLogo(){
       ]);
     }
     if (img.naturalWidth) return () => {};
-  } catch {}
+  } catch (e) { void e; }
   const makeSvgData = () => {
     const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='300' height='60'>
       <rect width='100%' height='100%' fill='white'/>
@@ -893,7 +944,8 @@ async function ensureExportLogo(){
       img.src = makeSvgData();
       replaced = true;
     }
-  } catch {
+  } catch (e) {
+    void e;
     img.dataset.exportOriginal = original;
     img.src = makeSvgData();
     replaced = true;
@@ -929,12 +981,25 @@ function closeTemplatesModal(){ document.getElementById('templatesModal').classL
 function renderTemplatesTable(query){
   const rows = searchTemplates(query);
   const tbody = document.getElementById('templatesTableBody');
-  tbody.innerHTML = '';
+  tbody.replaceChildren();
+  const frag = document.createDocumentFragment();
   rows.forEach(t => {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${t.description}</td><td>${t.sku||''}</td><td>${t.type||''}</td><td class="right">$${formatNumber(t.price||0)}</td><td class="center"><button class="btn" data-addtpl='${encodeURIComponent(JSON.stringify(t))}'>Agregar</button></td>`;
-    tbody.appendChild(tr);
+    tr.appendChild(createCell(t.description || ''));
+    tr.appendChild(createCell(t.sku || ''));
+    tr.appendChild(createCell(t.type || ''));
+    tr.appendChild(createCell(`$${formatNumber(t.price || 0)}`, 'right'));
+    const action = document.createElement('td');
+    action.className = 'center';
+    const btn = document.createElement('button');
+    btn.className = 'btn';
+    btn.textContent = 'Agregar';
+    btn.dataset.addtpl = encodeURIComponent(JSON.stringify(t));
+    action.appendChild(btn);
+    tr.appendChild(action);
+    frag.appendChild(tr);
   });
+  tbody.appendChild(frag);
   tbody.onclick = (e)=>{
     const btn = e.target.closest('button[data-addtpl]');
     if (btn){ const t = JSON.parse(decodeURIComponent(btn.getAttribute('data-addtpl'))); addRowFromTemplate(t); return; }
@@ -949,26 +1014,15 @@ function loadTplToForm(id){ const t = getTemplates().find(x=>x.id===id); if (!t)
 function saveTplFromForm(){ const id = document.getElementById('tplSave').dataset.id||undefined; const description = document.getElementById('tplDesc').value.trim(); const sku = document.getElementById('tplSku').value.trim(); const type = document.getElementById('tplType').value; const price = parseFloat(document.getElementById('tplPrice').value||'0')||0; if (!description){ showNotification('Descripción requerida','error'); return;} upsertTemplate({ id, description, sku, type, price }); renderTemplatesTable(document.getElementById('templatesSearch').value); clearTplForm(); showNotification('Plantilla guardada','success'); }
 function onTplImport(e){ const file = e.target.files && e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = () => { importTemplatesCSV(reader.result||''); renderTemplatesTable(document.getElementById('templatesSearch').value); showNotification('Plantillas importadas','success'); }; reader.readAsText(file); e.target.value=''; }
 function addRowFromTemplate(t){
-  const tr = document.createElement('tr');
-  tr.innerHTML = `
-    <td class="editable" contenteditable>${t.description}</td>
-    <td class="center editable qty" contenteditable>1</td>
-    <td class="right editable price" contenteditable>${(t.price||0).toFixed(2)}</td>
-    <td class="right subtotal">0.00</td>
-    <td class="center editable" contenteditable>${t.sku||''}</td>
-    <td class="center">
-      <select class="transaction-type-select item-type" style="font-size:11px; padding:4px;">
-        <option value="producto" ${t.type==='producto'?'selected':''}>Producto</option>
-        <option value="servicio" ${t.type==='servicio'?'selected':''}>Servicio</option>
-        <option value="reparacion" ${t.type==='reparacion'?'selected':''}>Reparación</option>
-      </select>
-    </td>
-    <td class="center" style="position:relative; white-space:nowrap;">
-      <button class="delete-row" title="Eliminar" data-action="delete-row">×</button>
-      <button class="btn" style="padding:4px 6px; font-size:12px;" title="Duplicar" data-action="row-dup">⎘</button>
-      <button class="btn" style="padding:4px 6px; font-size:12px;" title="Subir" data-action="row-up">↑</button>
-      <button class="btn" style="padding:4px 6px; font-size:12px;" title="Bajar" data-action="row-down">↓</button>
-    </td>`;
+  const tr = buildItemRow({
+    description: t.description || '',
+    qty: '1',
+    price: (t.price || 0).toFixed(2),
+    discount: '0',
+    subtotal: '0.00',
+    sku: t.sku || '',
+    type: t.type || 'producto'
+  });
   $('#itemsBody').appendChild(tr);
   recalc();
   closeTemplatesModal();
@@ -996,23 +1050,36 @@ function getQRPayload(){
     id: getCurrentReceiptId() || ''
   };
 }
-function getQRSecret(){ try { const s = localStorage.getItem('qr_secret'); if (s) return s; } catch {} return 'CCMX-QR-2025'; }
-async function updateQR(){
-  const box = document.getElementById('qrBox');
-  if (!box || typeof QRCode === 'undefined') return;
+function getQRSecret(){
+  try { const s = localStorage.getItem('qr_secret'); if (s) return s; } catch (e) { void e; }
+  return 'CCMX-QR-2025';
+}
+async function buildVerifyUrl(){
   const payload = JSON.stringify(getQRPayload());
   const p = base64url(payload);
   const h = await sha256Hex(p + '.' + getQRSecret());
-  const settings = JSON.parse(localStorage.getItem('app_settings')||'{}');
+  let settings = {};
+  try { settings = JSON.parse(localStorage.getItem('app_settings') || '{}') || {}; } catch (e) { void e; }
   let base = settings.verifyBase || 'https://recibos.ciaociao.mx';
-  if (!/^https?:\/\//i.test(base)) { const parts = location.pathname.split('/'); parts.pop(); parts.pop(); base = location.origin + (parts.join('/') || ''); }
+  if (!/^https?:\/\//i.test(base)) {
+    const parts = location.pathname.split('/');
+    parts.pop();
+    parts.pop();
+    base = location.origin + (parts.join('/') || '');
+  }
   let path = settings.verifyPath || '/verify/index.html';
   if (!path.startsWith('/')) path = '/' + path;
-  const url = `${base}${path}?p=${p}&h=${h}`;
-  box.innerHTML = '';
-  try { new QRCode(box, { text: url, width: 100, height: 100, correctLevel: QRCode.CorrectLevel.M }); } catch {}
+  return `${base}${path}?p=${p}&h=${h}`;
+}
+async function updateQR(){
+  const box = document.getElementById('qrBox');
+  if (!box || typeof QRCode === 'undefined') return;
+  const url = await buildVerifyUrl();
+  if (!url) return;
+  box.replaceChildren();
+  try { new QRCode(box, { text: url, width: 100, height: 100, correctLevel: QRCode.CorrectLevel.M }); } catch (e) { void e; }
   box.dataset.url = url;
-  try { box.setAttribute('title', url); } catch {}
+  try { box.setAttribute('title', url); } catch (e) { void e; }
 }
 
 // =============
@@ -1032,7 +1099,7 @@ function openSettingsModal(){
       if (typeof s.lineRound !== 'undefined') document.getElementById('settingsLineRound').value = s.lineRound;
       if (typeof s.totalRound !== 'undefined') document.getElementById('settingsTotalRound').value = s.totalRound;
     }
-  } catch {}
+  } catch (e) { void e; }
   document.getElementById('settingsModal').classList.add('active');
   document.body.classList.add('modal-open');
 }
@@ -1049,16 +1116,16 @@ function saveSettingsFromModal(){
     lineRound: document.getElementById('settingsLineRound').value || 'none',
     totalRound: document.getElementById('settingsTotalRound').value || 'none'
   };
-  try { localStorage.setItem('app_settings', JSON.stringify(s)); } catch {}
+  try { localStorage.setItem('app_settings', JSON.stringify(s)); } catch (e) { void e; }
   const applyEl = document.getElementById('applyIVA'); if (applyEl) applyEl.checked = s.applyIVA;
   const rateEl = document.getElementById('ivaRate'); if (rateEl) rateEl.value = s.ivaRate;
   // Actualizar validez mostrada acorde a configuración
   try {
     if (typeof s.validityDays === 'number') {
       const now = new Date(); const v = new Date(now); v.setDate(v.getDate() + s.validityDays);
-      $('#validUntil').textContent = formatDate(v);
+      setDateEl($('#validUntil'), v);
     }
-  } catch {}
+  } catch (e) { void e; }
   if (s.template === 'simple') document.body.classList.add('simple'); else document.body.classList.remove('simple');
   recalc();
   // Refrescar QR si cambió URL base de verificación
@@ -1081,7 +1148,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const blob = new Blob([JSON.stringify(data,null,2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a'); a.href = url; a.download = 'ciaociao-backup.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-    } catch {}
+    } catch (e) { void e; }
   });
   if (impInput) impInput.addEventListener('change', async (e) => {
     const file = e.target.files && e.target.files[0]; if (!file) return;
@@ -1093,7 +1160,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (data.templates) localStorage.setItem('item_templates', JSON.stringify(data.templates));
       if (data.settings) localStorage.setItem('app_settings', JSON.stringify(data.settings));
       showNotification('Datos importados', 'success');
-    } catch { showNotification('Archivo inválido','error'); }
+    } catch (e) { void e; showNotification('Archivo inválido','error'); }
   });
 });
 
@@ -1106,12 +1173,24 @@ function renderClientsTable(query){
   const q = (query||'').toLowerCase();
   const tbody = document.getElementById('clientsTableBody');
   const list = aggregateClients().filter(c => (c.name||'').toLowerCase().includes(q) || (c.phone||'').toLowerCase().includes(q) || (c.email||'').toLowerCase().includes(q));
-  tbody.innerHTML = '';
+  tbody.replaceChildren();
+  const frag = document.createDocumentFragment();
   list.slice(0,50).forEach(c => {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${c.name||''}</td><td>${c.phone||''}</td><td>${c.email||''}</td><td>${c.address||''}</td><td><button class="btn" data-pick="${encodeURIComponent(JSON.stringify(c))}">Elegir</button></td>`;
-    tbody.appendChild(tr);
+    tr.appendChild(createCell(c.name || ''));
+    tr.appendChild(createCell(c.phone || ''));
+    tr.appendChild(createCell(c.email || ''));
+    tr.appendChild(createCell(c.address || ''));
+    const action = document.createElement('td');
+    const btn = document.createElement('button');
+    btn.className = 'btn';
+    btn.textContent = 'Elegir';
+    btn.dataset.pick = encodeURIComponent(JSON.stringify(c));
+    action.appendChild(btn);
+    tr.appendChild(action);
+    frag.appendChild(tr);
   });
+  tbody.appendChild(frag);
   tbody.onclick = (e)=>{
     const btn = e.target.closest('button[data-pick]');
     if (!btn) return;
@@ -1125,8 +1204,8 @@ function renderClientsTable(query){
 }
 function aggregateClients(){
   const out = [];
-  try { (JSON.parse(localStorage.getItem('premium_receipts_ciaociao')||'[]')||[]).forEach(r => out.push(r.client||{})); } catch {}
-  try { (JSON.parse(localStorage.getItem('quotations_ciaociao')||'[]')||[]).forEach(r => out.push(r.client||{})); } catch {}
+  try { (JSON.parse(localStorage.getItem('premium_receipts_ciaociao')||'[]')||[]).forEach(r => out.push(r.client||{})); } catch (e) { void e; }
+  try { (JSON.parse(localStorage.getItem('quotations_ciaociao')||'[]')||[]).forEach(r => out.push(r.client||{})); } catch (e) { void e; }
   const seen = new Set();
   const uniq = [];
   out.forEach(c => {

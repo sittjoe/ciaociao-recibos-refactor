@@ -103,7 +103,7 @@ function sanitizeNumber(input){
   const id = input.id;
   const val = input.value;
   if (['peso','precioGramo','horas','tarifa','gemas','margen'].includes(id)){
-    const cleaned = String(val).replace(/[^0-9.\-]/g,'');
+    const cleaned = String(val).replace(/[^0-9.-]/g, '');
     if (cleaned !== val) input.value = cleaned;
   }
 }
@@ -122,7 +122,7 @@ function persist(){
       cliente: { nombre: $('#cliNombre').value, tel: $('#cliTel').value, desc: $('#descripcion').value }
     };
     localStorage.setItem('calc_state', JSON.stringify(s));
-  } catch {}
+  } catch (e) { void e; }
 }
 
 function restore(){
@@ -138,7 +138,7 @@ function restore(){
     if (s.margen) $('#margen').value = s.margen;
     if (s.aplicaIVA) $('#aplicaIVA').value = s.aplicaIVA;
     if (s.cliente){ $('#cliNombre').value = s.cliente.nombre||''; $('#cliTel').value = s.cliente.tel||''; $('#descripcion').value = s.cliente.desc||''; }
-  } catch {}
+  } catch (e) { void e; }
 }
 
 function debounce(fn, wait=50){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), wait); }; }

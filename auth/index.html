@@ -59,8 +59,12 @@
           localStorage.setItem('sessionExpiry', String(expiry));
         } catch {}
       }
+      function getPassword(){
+        try { const p = localStorage.getItem('app_password'); if (p) return p; } catch {}
+        return '27181730';
+      }
       function tryLogin(){
-        if (input.value === '27181730') { setSessionLocal(12); goHome(); }
+        if (input.value === getPassword()) { setSessionLocal(12); goHome(); }
         else { err.textContent = 'Contraseña incorrecta'; input.select(); }
       }
       enter.addEventListener('click', tryLogin);

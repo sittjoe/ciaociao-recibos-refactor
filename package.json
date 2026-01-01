@@ -6,10 +6,12 @@
   "scripts": {
     "start": "python3 -m http.server 8080",
     "e2e": "playwright test",
-    "lint": "eslint \"src/**/*.js\" --max-warnings=0 || true",
+    "lint": "ESLINT_USE_FLAT_CONFIG=false eslint \"src/**/*.js\" --max-warnings=0 || true",
     "format": "prettier --write ."
   },
   "devDependencies": {
-    "@playwright/test": "^1.47.2"
+    "@playwright/test": "^1.47.2",
+    "eslint": "^8.57.0",
+    "prettier": "^3.3.3"
   }
 }

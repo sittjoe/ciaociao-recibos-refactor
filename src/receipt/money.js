@@ -1,6 +1,6 @@
 export function parseMoney(v) {
   if (!v) return 0;
-  return parseFloat(String(v).replace(/[^0-9.\-]/g, '')) || 0;
+  return parseFloat(String(v).replace(/[^0-9.-]/g, '')) || 0;
 }
 
 export function formatNumber(n) {

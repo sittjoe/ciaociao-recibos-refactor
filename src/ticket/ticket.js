@@ -1,5 +1,3 @@
-import { parseMoney } from '../receipt/money.js';
-
 function $(s, c=document){ return c.querySelector(s); }
 
 function fill(data){
@@ -7,12 +5,17 @@ function fill(data){
   $('#tDate').textContent = `Fecha: ${data.dates?.issue || '-'}`;
   $('#tClient').textContent = `Cliente: ${data.client?.name || '-'}`;
   const itemsEl = $('#tItems');
-  itemsEl.innerHTML = '';
+  itemsEl.replaceChildren();
   (data.items || []).forEach(it => {
     const row = document.createElement('div');
     row.className = 'row';
     const qty = it.qty || '1';
-    row.innerHTML = `<span>${qty} x ${it.description}</span><span>$${it.subtotal}</span>`;
+    const left = document.createElement('span');
+    left.textContent = `${qty} x ${it.description || ''}`;
+    const right = document.createElement('span');
+    right.textContent = `$${it.subtotal || ''}`;
+    row.appendChild(left);
+    row.appendChild(right);
     itemsEl.appendChild(row);
   });
   $('#tSubtotal').textContent = `$${data.totals?.subtotal || '0.00'}`;
@@ -28,13 +31,13 @@ function load(){
   try {
     const raw = localStorage.getItem('ticket_preview_data');
     if (raw) { const d = JSON.parse(raw); fill(d); return; }
-  } catch {}
+  } catch (e) { void e; }
   // Fallback: último recibo guardado
   try {
     const all = JSON.parse(localStorage.getItem('premium_receipts_ciaociao')||'[]');
     const last = all[all.length - 1];
     if (last) fill(last);
-  } catch {}
+  } catch (e) { void e; }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -42,4 +45,3 @@ document.addEventListener('DOMContentLoaded', () => {
   const back = document.getElementById('backBtn');
   if (back) back.addEventListener('click', () => history.back());
 });
-

@@ -1,4 +1,4 @@
-import { getCurrentReceiptId, setCurrentReceiptId, getSignatures } from './state.js';
+import { getDateTimestamp } from '../common/dates.js';
 
 const STORAGE_KEY = 'premium_receipts_ciaociao';
 let sortDir = localStorage.getItem('receipts_sort_dir') || 'desc'; // 'asc' | 'desc'
@@ -27,40 +27,64 @@ export function deleteReceipt(id) {
 function sortByDate(arr) {
   const copy = arr.slice();
   copy.sort((a,b)=>{
-    const da = new Date(a?.dates?.issue || a?.date || 0).getTime();
-    const db = new Date(b?.dates?.issue || b?.date || 0).getTime();
+    const da = getReceiptDateTs(a);
+    const db = getReceiptDateTs(b);
     return sortDir === 'asc' ? da - db : db - da;
   });
   return copy;
 }
 
+function getReceiptDateTs(r) {
+  return getDateTimestamp(r?.dates?.issueISO)
+    || getDateTimestamp(r?.dates?.issue)
+    || getDateTimestamp(r?.date)
+    || 0;
+}
+
+function createCell(text) {
+  const td = document.createElement('td');
+  td.textContent = text == null ? '' : String(text);
+  return td;
+}
+
+function createActionButton(label, action, id) {
+  const btn = document.createElement('button');
+  btn.textContent = label;
+  btn.dataset.action = action;
+  btn.dataset.id = id;
+  return btn;
+}
+
+function buildRow(r) {
+  const tr = document.createElement('tr');
+  tr.appendChild(createCell(r.number));
+  tr.appendChild(createCell(r.dates?.issue || ''));
+  tr.appendChild(createCell(r.client?.name || ''));
+  tr.appendChild(createCell(r.totals?.total || ''));
+  tr.appendChild(createCell(r.transactionType || ''));
+  const actions = document.createElement('td');
+  actions.appendChild(createActionButton('Cargar', 'load', r.id));
+  actions.appendChild(createActionButton('Eliminar', 'delete', r.id));
+  tr.appendChild(actions);
+  return tr;
+}
+
 export function renderHistoryTable(onLoad) {
   const tbody = document.getElementById('historyTableBody');
-  tbody.innerHTML = '';
+  tbody.replaceChildren();
   const rows = sortByDate(listReceipts());
-  rows.forEach(r => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${r.number}</td>
-      <td>${(r.dates?.issue) || ''}</td>
-      <td>${(r.client?.name) || ''}</td>
-      <td>${(r.totals?.total) || ''}</td>
-      <td>${r.transactionType || ''}</td>
-      <td>
-        <button data-action="load" data-id="${r.id}">Cargar</button>
-        <button data-action="delete" data-id="${r.id}">Eliminar</button>
-      </td>`;
-    tbody.appendChild(tr);
-  });
+  const frag = document.createDocumentFragment();
+  rows.forEach(r => frag.appendChild(buildRow(r)));
+  tbody.appendChild(frag);
 
-  tbody.addEventListener('click', (e) => {
-    const btn = e.target.closest('button');
+  tbody.onclick = (e) => {
+    const btn = e.target.closest('button[data-action]');
     if (!btn) return;
     const id = btn.getAttribute('data-id');
     const action = btn.getAttribute('data-action');
     if (action === 'load') onLoad(id);
     if (action === 'delete') { deleteReceipt(id); renderHistoryTable(onLoad); }
-  }, { once: true });
+  };
 
   const sortTh = document.getElementById('historySortDate');
   const dirSpan = document.getElementById('historySortDateDir');
@@ -79,43 +103,36 @@ export function searchHistory(query) {
   const tbody = document.getElementById('historyTableBody');
   const from = document.getElementById('historyFrom')?.value;
   const to = document.getElementById('historyTo')?.value;
+  const fromTs = from ? getDateTimestamp(from) : 0;
+  const toTs = to ? getDateTimestamp(to) + (24 * 60 * 60 * 1000 - 1) : 0;
   const receipts = sortByDate(listReceipts()).filter(r => {
     return (r.number || '').toLowerCase().includes(q)
       || (r.client?.name || '').toLowerCase().includes(q)
       || (r.dates?.issue || '').toLowerCase().includes(q);
   }).filter(r => {
-    const d = new Date(r?.dates?.issue || r?.date || 0);
-    if (from && d < new Date(from)) return false;
-    if (to && d > new Date(to)) return false;
+    const d = getReceiptDateTs(r);
+    if (from && d < fromTs) return false;
+    if (to && d > toTs) return false;
     return true;
   });
-  tbody.innerHTML = '';
-  receipts.forEach(r => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${r.number}</td>
-      <td>${(r.dates?.issue) || ''}</td>
-      <td>${(r.client?.name) || ''}</td>
-      <td>${(r.totals?.total) || ''}</td>
-      <td>${r.transactionType || ''}</td>
-      <td>
-        <button data-action="load" data-id="${r.id}">Cargar</button>
-        <button data-action="delete" data-id="${r.id}">Eliminar</button>
-      </td>`;
-    tbody.appendChild(tr);
-  });
+  tbody.replaceChildren();
+  const frag = document.createDocumentFragment();
+  receipts.forEach(r => frag.appendChild(buildRow(r)));
+  tbody.appendChild(frag);
 }
 
 export function exportHistoryCSV() {
   const q = document.getElementById('searchHistory')?.value || '';
   const from = document.getElementById('historyFrom')?.value;
   const to = document.getElementById('historyTo')?.value;
+  const fromTs = from ? getDateTimestamp(from) : 0;
+  const toTs = to ? getDateTimestamp(to) + (24 * 60 * 60 * 1000 - 1) : 0;
   const items = sortByDate(listReceipts()).filter(r => {
     const ok = (r.number||'').toLowerCase().includes(q.toLowerCase()) || (r.client?.name||'').toLowerCase().includes(q.toLowerCase()) || (r.dates?.issue||'').toLowerCase().includes(q.toLowerCase());
     if (!ok) return false;
-    const d = new Date(r?.dates?.issue || r?.date || 0);
-    if (from && d < new Date(from)) return false;
-    if (to && d > new Date(to)) return false;
+    const d = getReceiptDateTs(r);
+    if (from && d < fromTs) return false;
+    if (to && d > toTs) return false;
     return true;
   });
   const rows = [ ['Folio','Fecha','Cliente','Total','Tipo'] ];

@@ -1,5 +1,4 @@
 // Simple password gate via standalone login page
-const PASSWORD = '27181730';
 const SESSION_HOURS = 12;
 
 function getBase(){
@@ -9,7 +8,7 @@ function getBase(){
     if (location.host.includes('github.io') && parts.length) return '/' + parts[0];
     // Local or custom hosting at root
     return '';
-  } catch { return ''; }
+  } catch (e) { void e; return ''; }
 }
 
 function isAuthenticated() {
@@ -17,7 +16,7 @@ function isAuthenticated() {
     const ok = localStorage.getItem('isAuthenticated') === 'true';
     const exp = parseInt(localStorage.getItem('sessionExpiry') || '0', 10);
     return ok && Date.now() < exp;
-  } catch { return false; }
+  } catch (e) { void e; return false; }
 }
 
 function setSession() {
@@ -25,14 +24,14 @@ function setSession() {
   try {
     localStorage.setItem('isAuthenticated', 'true');
     localStorage.setItem('sessionExpiry', String(expiry));
-  } catch {}
+  } catch (e) { void e; }
 }
 
 function clearSession() {
   try {
     localStorage.removeItem('isAuthenticated');
     localStorage.removeItem('sessionExpiry');
-  } catch {}
+  } catch (e) { void e; }
 }
 
 export function ensureAuthenticated() {

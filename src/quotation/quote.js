@@ -1,7 +1,9 @@
+/* global html2canvas, QRCode, DOMPurify */
 import { parseMoney, formatNumber, formatMoney, normalizeCurrencyText, normalizeIntegerText } from '../receipt/money.js';
 import { generateQuoteNumber, getCurrentQuoteId, setCurrentQuoteId } from './state.js';
 import { saveQuote, loadQuote, openHistory, closeHistory, searchHistory } from './history.js';
 import { searchTemplates } from '../common/templates.js';
+import { setDateEl, getISODateFromEl, parseDateString } from '../common/dates.js';
 
 const $ = (s, c = document) => c.querySelector(s);
 const $$ = (s, c = document) => Array.from(c.querySelectorAll(s));
@@ -14,10 +16,6 @@ function showNotification(message, type = 'success') {
   setTimeout(() => n.classList.remove('show'), 3000);
 }
 
-function formatDate(date) {
-  const months = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-  return `${date.getDate()} de ${months[date.getMonth()]} de ${date.getFullYear()}`;
-}
 
 function recalc() {
   let subtotal = 0;
@@ -59,7 +57,7 @@ function parseLineDiscount(text, base){
   const t = String(text).trim();
   if (!t) return 0;
   if (/%$/.test(t)) {
-    const p = parseFloat(t.replace(/[^0-9.\-]/g,'')) || 0;
+    const p = parseFloat(t.replace(/[^0-9.-]/g, '')) || 0;
     const pct = Math.min(Math.max(p, 0), 100);
     return base * (pct/100);
   }
@@ -67,26 +65,75 @@ function parseLineDiscount(text, base){
   return Math.min(Math.max(val, 0), base);
 }
 
-function addRow() {
+function createCell(text, className) {
+  const td = document.createElement('td');
+  if (className) td.className = className;
+  td.textContent = text == null ? '' : String(text);
+  return td;
+}
+
+function createEditableCell(text, className) {
+  const td = createCell(text, className);
+  td.contentEditable = 'true';
+  return td;
+}
+
+function createRowActionButton(text, action, title, className) {
+  const btn = document.createElement('button');
+  if (className) btn.className = className;
+  if (title) btn.title = title;
+  btn.textContent = text;
+  btn.dataset.action = action;
+  return btn;
+}
+
+function buildItemRow(item = {}) {
+  const {
+    description = 'Artículo de joyería',
+    qty = '1',
+    price = '0.00',
+    discount = '0',
+    subtotal = '0.00',
+    sku = '—'
+  } = item;
+
   const tr = document.createElement('tr');
-  tr.innerHTML = `
-    <td class="editable" contenteditable>Artículo de joyería</td>
-    <td class="center editable qty" contenteditable>1</td>
-    <td class="right editable price" contenteditable>0.00</td>
-    <td class="right subtotal">0.00</td>
-    <td class="center editable" contenteditable>—</td>
-    <td class="center" style="position:relative; white-space:nowrap;">
-      <button class="delete-row" title="Eliminar" data-action="delete-row">×</button>
-      <button class="btn" style="padding:4px 6px; font-size:12px;" title="Duplicar" data-action="row-dup">⎘</button>
-      <button class="btn" style="padding:4px 6px; font-size:12px;" title="Subir" data-action="row-up">↑</button>
-      <button class="btn" style="padding:4px 6px; font-size:12px;" title="Bajar" data-action="row-down">↓</button>
-    </td>`;
+  tr.appendChild(createEditableCell(description, 'editable'));
+  tr.appendChild(createEditableCell(qty, 'center editable qty'));
+  tr.appendChild(createEditableCell(price, 'right editable price'));
+  tr.appendChild(createEditableCell(discount, 'right editable line-discount'));
+  tr.appendChild(createCell(subtotal, 'right subtotal'));
+  tr.appendChild(createEditableCell(sku, 'center editable'));
+
+  const actionsTd = document.createElement('td');
+  actionsTd.className = 'center';
+  actionsTd.style.position = 'relative';
+  actionsTd.style.whiteSpace = 'nowrap';
+  const del = createRowActionButton('×', 'delete-row', 'Eliminar', 'delete-row');
+  const dup = createRowActionButton('⎘', 'row-dup', 'Duplicar', 'btn');
+  const up = createRowActionButton('↑', 'row-up', 'Subir', 'btn');
+  const down = createRowActionButton('↓', 'row-down', 'Bajar', 'btn');
+  [dup, up, down].forEach(b => { b.style.padding = '4px 6px'; b.style.fontSize = '12px'; });
+  actionsTd.appendChild(del);
+  actionsTd.appendChild(dup);
+  actionsTd.appendChild(up);
+  actionsTd.appendChild(down);
+  tr.appendChild(actionsTd);
+
+  return tr;
+}
+
+function addRow() {
+  const tr = buildItemRow();
   $('#itemsBody').appendChild(tr);
-  tr.querySelector('.editable').focus();
+  const first = tr.querySelector('.editable');
+  if (first) first.focus();
   showNotification('Producto agregado','success');
 }
 
 function collectQuoteData() {
+  const issueEl = $('#issueDate');
+  const validEl = $('#validUntil');
   return {
     id: getCurrentQuoteId(),
     number: $('#quoteNumber').textContent,
@@ -99,8 +146,10 @@ function collectQuoteData() {
       address: $('#clientAddress').textContent,
     },
     dates: {
-      issue: $('#issueDate').textContent,
-      validUntil: $('#validUntil').textContent,
+      issue: issueEl?.textContent || '',
+      issueISO: getISODateFromEl(issueEl),
+      validUntil: validEl?.textContent || '',
+      validUntilISO: getISODateFromEl(validEl),
     },
     items: $$('#tabla-items tbody tr').map(tr => {
       const cells = Array.from(tr.querySelectorAll('td'));
@@ -140,19 +189,18 @@ function loadQuoteAction(id) {
   $('#clientPhone').textContent = q.client?.phone || '';
   $('#clientEmail').textContent = q.client?.email || '';
   $('#clientAddress').textContent = q.client?.address || '';
-  $('#issueDate').textContent = q.dates?.issue || '';
-  $('#validUntil').textContent = q.dates?.validUntil || '';
-  $('#itemsBody').innerHTML = '';
+  applyStoredDate($('#issueDate'), q.dates?.issue, q.dates?.issueISO);
+  applyStoredDate($('#validUntil'), q.dates?.validUntil, q.dates?.validUntilISO);
+  $('#itemsBody').replaceChildren();
   (q.items || []).forEach(it => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td class="editable" contenteditable>${it.description}</td>
-      <td class="center editable qty" contenteditable>${it.qty}</td>
-      <td class="right editable price" contenteditable>${it.price}</td>
-      <td class="right editable line-discount" contenteditable>${it.discount || '0'}</td>
-      <td class="right subtotal">${it.subtotal}</td>
-      <td class="center editable" contenteditable>${it.sku}</td>
-      <td style="position:relative;"><span class="delete-row" data-action="delete-row">×</span></td>`;
+    const tr = buildItemRow({
+      description: it.description || '',
+      qty: it.qty || '1',
+      price: it.price || '0.00',
+      discount: it.discount || '0',
+      subtotal: it.subtotal || '0.00',
+      sku: it.sku || ''
+    });
     $('#itemsBody').appendChild(tr);
   });
   $('#descuento').textContent = q.totals?.discount || '0.00';
@@ -160,25 +208,37 @@ function loadQuoteAction(id) {
   showNotification('Cotización cargada','success');
 }
 
+function applyStoredDate(el, displayText, isoText) {
+  if (!el) return;
+  const parsed = parseDateString(isoText || displayText);
+  if (parsed) {
+    setDateEl(el, parsed);
+    return;
+  }
+  el.textContent = displayText || '';
+  if (el.dataset) delete el.dataset.iso;
+}
+
 function newQuote() {
-  $('#itemsBody').innerHTML = '';
+  $('#itemsBody').replaceChildren();
   addRow();
   $('#descuento').textContent = '0.00';
   const number = generateQuoteNumber();
   $('#quoteNumber').textContent = number;
   setCurrentQuoteId(`quote_${Date.now()}_${Math.random().toString(36).slice(2,11)}`);
   const now = new Date(); const valid = new Date(now); valid.setDate(valid.getDate() + 30);
-  $('#issueDate').textContent = formatDate(now);
-  $('#validUntil').textContent = formatDate(valid);
+  setDateEl($('#issueDate'), now);
+  setDateEl($('#validUntil'), valid);
   recalc();
 }
 
 async function generatePDF() {
+  let endExport;
   try {
     showNotification('Generando PDF...','info');
     saveQuoteAction();
     updateQR();
-    const endExport = await exportStart();
+    endExport = await exportStart();
     await waitFor(()=> document.getElementById('qrBox')?.children.length>0, 600);
     const element = document.querySelector('.gilded-frame');
     const canvas = await html2canvas(element, { scale: 2, logging: false, useCORS: true, backgroundColor: '#ffffff', windowWidth: 900, windowHeight: element.scrollHeight });
@@ -199,7 +259,7 @@ async function generatePDF() {
     pdf.save(fileName);
     showNotification('PDF generado correctamente','success');
   } catch (e) { console.error(e); showNotification('Error al generar PDF','error'); }
-  finally { endExport && endExport(); }
+  finally { if (endExport) endExport(); }
 }
 
 function shareWhatsApp() {
@@ -215,17 +275,9 @@ function shareWhatsApp() {
   // Añadir enlace de verificación firmado
   (async () => {
     try {
-      const payload = JSON.stringify({ t:'Q', n: $('#quoteNumber').textContent.trim(), c: $('#clientName').textContent.trim(), d: $('#issueDate').textContent.trim(), tot: $('#total').textContent.trim(), id: getCurrentQuoteId() || '' });
-      const p = b64url(payload);
-      const h = await sha256Hex(p + '.' + getSecret());
-      const settings = JSON.parse(localStorage.getItem('app_settings')||'{}');
-      let base = settings.verifyBase || 'https://recibos.ciaociao.mx';
-      if (!/^https?:\/\//i.test(base)) { const parts = location.pathname.split('/'); parts.pop(); parts.pop(); base = location.origin + (parts.join('/') || ''); }
-      let path = settings.verifyPath || '/verify/index.html';
-      if (!path.startsWith('/')) path = '/' + path;
-      const verifyUrl = `${base}${path}?p=${p}&h=${h}`;
+      const verifyUrl = await buildVerifyUrl();
       msg += `\nVerificar: ${verifyUrl}`;
-    } catch {}
+    } catch (e) { void e; }
     const phone = (q.client.phone || '').replace(/\D/g,'');
     const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
     window.open(url, '_blank');
@@ -268,11 +320,11 @@ function bindUI() {
   const copyQrBtnQ = document.getElementById('copyQrLinkQ');
   if (copyQrBtnQ) copyQrBtnQ.addEventListener('click', async () => {
     try {
-      if (!document.getElementById('qrBox').dataset.url) updateQR();
+      if (!document.getElementById('qrBox').dataset.url) await updateQR();
       const url = document.getElementById('qrBox').dataset.url || '';
       await navigator.clipboard.writeText(url);
       showNotification('Enlace copiado','success');
-    } catch { showNotification('No se pudo copiar','error'); }
+    } catch (e) { void e; showNotification('No se pudo copiar','error'); }
   });
   const openTplBtn = document.getElementById('open-templates');
   if (openTplBtn) openTplBtn.addEventListener('click', openTemplatesModal);
@@ -296,7 +348,7 @@ function bindUI() {
       document.getElementById('settingsTemplate').value = 'premium';
       document.getElementById('settingsPdfFormat').value = 'letter';
       document.getElementById('settingsVerifyBase').value = '';
-    } catch {}
+    } catch (e) { void e; }
   });
   // Export/Import data (local)
   const expBtnQ = document.getElementById('exportDataQ');
@@ -346,7 +398,7 @@ function bindUI() {
     };
     updateMobileBars();
     // Optional: react to viewport changes
-    try { window.matchMedia('(max-width: 768px)').addEventListener('change', updateMobileBars); } catch {}
+    try { window.matchMedia('(max-width: 768px)').addEventListener('change', updateMobileBars); } catch (e) { void e; }
     const add = document.getElementById('ma-add'); if (add) add.addEventListener('click', addRow);
     const save = document.getElementById('ma-save'); if (save) save.addEventListener('click', saveQuoteAction);
     const pdf = document.getElementById('ma-pdf'); if (pdf) pdf.addEventListener('click', generatePDF);
@@ -399,7 +451,7 @@ function bindUI() {
             });
             notification.appendChild(btn);
             notification.className = 'notification info show';
-            setTimeout(()=>{ notification.classList.remove('show'); try{btn.remove();}catch{} }, 5000);
+            setTimeout(()=>{ notification.classList.remove('show'); try{btn.remove();}catch(e){ void e; } }, 5000);
           }
         }
       }
@@ -423,7 +475,7 @@ function bindUI() {
     if (t.matches('.line-discount')) {
       const raw = (t.textContent||'').trim();
       if (/%$/.test(raw)) {
-        const p = Math.min(Math.max(parseFloat(raw.replace(/[^0-9.\-]/g,'')||'0'),0),100);
+        const p = Math.min(Math.max(parseFloat(raw.replace(/[^0-9.-]/g, '') || '0'), 0), 100);
         t.textContent = `${p}%`;
       } else {
         t.textContent = normalizeCurrencyText(raw||'0', { min: 0 });
@@ -472,21 +524,21 @@ function prefillFromCalculatorIfPresent() {
       $('#clientAddress').textContent = data.client.address || $('#clientAddress').textContent;
     }
     if (Array.isArray(data.items) && data.items.length) {
-      $('#itemsBody').innerHTML = '';
+      $('#itemsBody').replaceChildren();
       data.items.forEach(it => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td class="editable" contenteditable>${it.description}</td>
-          <td class="center editable qty" contenteditable>${it.qty}</td>
-          <td class="right editable price" contenteditable>${it.price}</td>
-          <td class="right subtotal">${it.subtotal}</td>
-          <td class="center editable" contenteditable>${it.sku || ''}</td>
-          <td style="position:relative;"><span class="delete-row" data-action="delete-row">×</span></td>`;
+        const tr = buildItemRow({
+          description: it.description || '',
+          qty: it.qty || '1',
+          price: it.price || '0.00',
+          discount: it.discount || '0',
+          subtotal: it.subtotal || '0.00',
+          sku: it.sku || ''
+        });
         $('#itemsBody').appendChild(tr);
       });
       recalc();
     }
-  } catch {}
+  } catch (e) { void e; }
 }
 
 function init() {
@@ -502,20 +554,20 @@ function init() {
       let changed = false;
       if (!('verifyBase' in s)) { s.verifyBase = 'https://recibos.ciaociao.mx'; changed = true; }
       if (!('verifyPath' in s)) { s.verifyPath = '/verify/index.html'; changed = true; }
-      if (changed) { try { localStorage.setItem('app_settings', JSON.stringify(s)); } catch {} }
+      if (changed) { try { localStorage.setItem('app_settings', JSON.stringify(s)); } catch (e) { void e; } }
       if (typeof s.validityDays === 'number') {
         const now = new Date(); const v = new Date(now); v.setDate(v.getDate() + s.validityDays);
-        $('#validUntil').textContent = formatDate(v);
+        setDateEl($('#validUntil'), v);
       }
       if (s.template === 'simple') document.body.classList.add('simple');
     }
-  } catch {}
+  } catch (e) { void e; }
   const number = generateQuoteNumber();
   $('#quoteNumber').textContent = number;
   setCurrentQuoteId(`quote_${Date.now()}_${Math.random().toString(36).slice(2,11)}`);
   const now = new Date(); const valid = new Date(now); valid.setDate(valid.getDate() + 30);
-  $('#issueDate').textContent = formatDate(now);
-  $('#validUntil').textContent = formatDate(valid);
+  setDateEl($('#issueDate'), now);
+  setDateEl($('#validUntil'), valid);
   recalc();
   prefillFromCalculatorIfPresent();
 }
@@ -535,7 +587,7 @@ function openSettingsModal(){
       if (typeof s.verifyBase !== 'undefined') document.getElementById('settingsVerifyBase').value = s.verifyBase;
       if (typeof s.verifyPath !== 'undefined') document.getElementById('settingsVerifyPath').value = s.verifyPath;
     }
-  } catch {}
+  } catch (e) { void e; }
   document.getElementById('settingsModal').classList.add('active');
   document.body.classList.add('modal-open');
 }
@@ -550,18 +602,25 @@ function saveSettingsFromModal(){
     verifyBase: document.getElementById('settingsVerifyBase').value || '',
     verifyPath: document.getElementById('settingsVerifyPath').value || '/verify/index.html'
   };
-  try { localStorage.setItem('app_settings', JSON.stringify(s)); } catch {}
+  try { localStorage.setItem('app_settings', JSON.stringify(s)); } catch (e) { void e; }
   const applyEl = document.getElementById('applyIVA'); if (applyEl) applyEl.checked = s.applyIVA;
   const rateEl = document.getElementById('ivaRate'); if (rateEl) rateEl.value = s.ivaRate;
+  try {
+    if (typeof s.validityDays === 'number') {
+      const now = new Date(); const v = new Date(now); v.setDate(v.getDate() + s.validityDays);
+      setDateEl($('#validUntil'), v);
+    }
+  } catch (e) { void e; }
   if (s.template === 'simple') document.body.classList.add('simple'); else document.body.classList.remove('simple');
   recalc();
   closeSettingsModal();
 }
 
 async function generatePNG(){
+  let endExport;
   try {
     showNotification('Generando PNG...','info');
-    const endExport = await exportStart();
+    endExport = await exportStart();
     await waitFor(()=> document.getElementById('qrBox')?.children.length>0, 600);
     const element = document.querySelector('.gilded-frame');
     const canvas = await html2canvas(element, { scale: 2, logging: false, useCORS: true, backgroundColor: '#ffffff', windowWidth: 900, windowHeight: element.scrollHeight });
@@ -570,7 +629,7 @@ async function generatePNG(){
     document.body.appendChild(a); a.click(); a.remove();
     showNotification('PNG generado','success');
   } catch(e){ console.error(e); showNotification('Error al generar PNG','error'); }
-  finally { endExport && endExport(); }
+  finally { if (endExport) endExport(); }
 }
 
 // Clientes recientes (reutiliza recibos + cotizaciones guardadas)
@@ -580,12 +639,24 @@ function renderClientsTable(query){
   const q = (query||'').toLowerCase();
   const tbody = document.getElementById('clientsTableBody');
   const list = aggregateClients().filter(c => (c.name||'').toLowerCase().includes(q) || (c.phone||'').toLowerCase().includes(q) || (c.email||'').toLowerCase().includes(q));
-  tbody.innerHTML='';
+  tbody.replaceChildren();
+  const frag = document.createDocumentFragment();
   list.slice(0,50).forEach(c => {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${c.name||''}</td><td>${c.phone||''}</td><td>${c.email||''}</td><td>${c.address||''}</td><td><button class=\"btn\" data-pick=\"${encodeURIComponent(JSON.stringify(c))}\">Elegir</button></td>`;
-    tbody.appendChild(tr);
+    tr.appendChild(createCell(c.name || ''));
+    tr.appendChild(createCell(c.phone || ''));
+    tr.appendChild(createCell(c.email || ''));
+    tr.appendChild(createCell(c.address || ''));
+    const action = document.createElement('td');
+    const btn = document.createElement('button');
+    btn.className = 'btn';
+    btn.textContent = 'Elegir';
+    btn.dataset.pick = encodeURIComponent(JSON.stringify(c));
+    action.appendChild(btn);
+    tr.appendChild(action);
+    frag.appendChild(tr);
   });
+  tbody.appendChild(frag);
   tbody.onclick = (e)=>{
     const btn = e.target.closest('button[data-pick]');
     if (!btn) return;
@@ -599,8 +670,8 @@ function renderClientsTable(query){
 }
 function aggregateClients(){
   const out = [];
-  try { (JSON.parse(localStorage.getItem('premium_receipts_ciaociao')||'[]')||[]).forEach(r => out.push(r.client||{})); } catch {}
-  try { (JSON.parse(localStorage.getItem('quotations_ciaociao')||'[]')||[]).forEach(r => out.push(r.client||{})); } catch {}
+  try { (JSON.parse(localStorage.getItem('premium_receipts_ciaociao')||'[]')||[]).forEach(r => out.push(r.client||{})); } catch (e) { void e; }
+  try { (JSON.parse(localStorage.getItem('quotations_ciaociao')||'[]')||[]).forEach(r => out.push(r.client||{})); } catch (e) { void e; }
   const seen = new Set();
   const uniq = [];
   out.forEach(c => { const key = `${c.name||''}|${c.phone||''}|${c.email||''}|${c.address||''}`; if (seen.has(key)) return; seen.add(key); uniq.push(c); });
@@ -616,9 +687,8 @@ function openDataModal() {
   $('#formClientPhone').value = $('#clientPhone').textContent.trim();
   $('#formClientEmail').value = $('#clientEmail').textContent.trim();
   $('#formClientAddress').value = $('#clientAddress').textContent.trim();
-  const parseShown = (t)=>{ const d=new Date(t); return isNaN(d)?'':d.toISOString().slice(0,10); };
-  $('#formIssueDate').value = parseShown($('#issueDate').textContent);
-  $('#formValidUntil').value = parseShown($('#validUntil').textContent);
+  $('#formIssueDate').value = getISODateFromEl($('#issueDate'));
+  $('#formValidUntil').value = getISODateFromEl($('#validUntil'));
   $('#dataModal').classList.add('active');
 }
 function closeDataModal(){ $('#dataModal').classList.remove('active'); }
@@ -637,18 +707,19 @@ function saveDataFromModal(){
   const address = addressInput.value.trim();
   const issue = issueInput.value;
   const validUntil = validInput.value;
+  const issueDate = parseDateString(issue);
+  const validDate = parseDateString(validUntil);
   if (!name) { setFieldError(nameInput, 'Nombre requerido'); ok = false; }
   if (phone && phone.replace(/\D/g,'').length < 8) { setFieldError(phoneInput, 'Teléfono inválido'); ok = false; }
   if (email && !/^\S+@\S+\.\S+$/.test(email)) { setFieldError(emailInput, 'Correo inválido'); ok = false; }
-  if (issue && validUntil && new Date(validUntil) < new Date(issue)) { setFieldError(validInput, '“Válido hasta” debe ser posterior'); ok = false; }
+  if (issueDate && validDate && validDate < issueDate) { setFieldError(validInput, '“Válido hasta” debe ser posterior'); ok = false; }
   if (!ok) return;
   $('#clientName').textContent = name;
   $('#clientPhone').textContent = phone || $('#clientPhone').textContent;
   $('#clientEmail').textContent = email || $('#clientEmail').textContent;
   $('#clientAddress').textContent = address || $('#clientAddress').textContent;
-  const fmt = (s)=> s? formatDate(new Date(s)) : '';
-  if (issue) $('#issueDate').textContent = fmt(issue);
-  if (validUntil) $('#validUntil').textContent = fmt(validUntil);
+  if (issueDate) setDateEl($('#issueDate'), issueDate);
+  if (validDate) setDateEl($('#validUntil'), validDate);
   closeDataModal();
   saveQuoteAction();
 }
@@ -677,12 +748,25 @@ function closeTemplatesModal(){ document.getElementById('templatesModal').classL
 function renderTemplatesTable(query){
   const rows = searchTemplates(query);
   const tbody = document.getElementById('templatesTableBody');
-  tbody.innerHTML = '';
+  tbody.replaceChildren();
+  const frag = document.createDocumentFragment();
   rows.forEach(t => {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${t.description}</td><td>${t.sku||''}</td><td>${t.type||''}</td><td class=\"right\">$${formatNumber(t.price||0)}</td><td class=\"center\"><button class=\"btn\" data-addtpl='${encodeURIComponent(JSON.stringify(t))}'>Agregar</button></td>`;
-    tbody.appendChild(tr);
+    tr.appendChild(createCell(t.description || ''));
+    tr.appendChild(createCell(t.sku || ''));
+    tr.appendChild(createCell(t.type || ''));
+    tr.appendChild(createCell(`$${formatNumber(t.price || 0)}`, 'right'));
+    const action = document.createElement('td');
+    action.className = 'center';
+    const btn = document.createElement('button');
+    btn.className = 'btn';
+    btn.textContent = 'Agregar';
+    btn.dataset.addtpl = encodeURIComponent(JSON.stringify(t));
+    action.appendChild(btn);
+    tr.appendChild(action);
+    frag.appendChild(tr);
   });
+  tbody.appendChild(frag);
   tbody.onclick = (e)=>{
     const btn = e.target.closest('button[data-addtpl]'); if (!btn) return;
     const t = JSON.parse(decodeURIComponent(btn.getAttribute('data-addtpl')));
@@ -690,53 +774,60 @@ function renderTemplatesTable(query){
   };
 }
 function addRowFromTemplate(t){
-  const tr = document.createElement('tr');
-  tr.innerHTML = `
-    <td class=\"editable\" contenteditable>${t.description}</td>
-    <td class=\"center editable qty\" contenteditable>1</td>
-    <td class=\"right editable price\" contenteditable>${(t.price||0).toFixed(2)}</td>
-    <td class=\"right subtotal\">0.00</td>
-    <td class=\"center editable\" contenteditable>${t.sku||''}</td>
-    <td class=\"center\" style=\"position:relative; white-space:nowrap;\">
-      <button class=\"delete-row\" title=\"Eliminar\" data-action=\"delete-row\">×</button>
-      <button class=\"btn\" style=\"padding:4px 6px; font-size:12px;\" title=\"Duplicar\" data-action=\"row-dup\">⎘</button>
-      <button class=\"btn\" style=\"padding:4px 6px; font-size:12px;\" title=\"Subir\" data-action=\"row-up\">↑</button>
-      <button class=\"btn\" style=\"padding:4px 6px; font-size:12px;\" title=\"Bajar\" data-action=\"row-down\">↓</button>
-    </td>`;
+  const tr = buildItemRow({
+    description: t.description || '',
+    qty: '1',
+    price: (t.price || 0).toFixed(2),
+    discount: '0',
+    subtotal: '0.00',
+    sku: t.sku || ''
+  });
   $('#itemsBody').appendChild(tr);
   recalc();
   closeTemplatesModal();
 }
 
 // QR code for quotes
-function getQRText(){
-  const num = $('#quoteNumber').textContent.trim();
-  const client = $('#clientName').textContent.trim();
-  const issue = $('#issueDate').textContent.trim();
-  const total = $('#total').textContent.trim();
-  return `CIAO CIAO MX\nCotización ${num}\nCliente: ${client}\nFecha: ${issue}\nTotal: ${total}\nhttps://www.ciaociao.mx`;
+function getQRPayload(){
+  return {
+    t: 'Q',
+    n: $('#quoteNumber').textContent.trim(),
+    c: $('#clientName').textContent.trim(),
+    d: $('#issueDate').textContent.trim(),
+    tot: $('#total').textContent.trim(),
+    id: getCurrentQuoteId() || ''
+  };
 }
-function updateQR(){
+async function buildVerifyUrl(){
+  const payload = JSON.stringify(getQRPayload());
+  const p = b64url(payload);
+  const h = await sha256Hex(p + '.' + getSecret());
+  let settings = {};
+  try { settings = JSON.parse(localStorage.getItem('app_settings') || '{}') || {}; } catch (e) { void e; }
+  let base = settings.verifyBase || 'https://recibos.ciaociao.mx';
+  if (!/^https?:\/\//i.test(base)) {
+    const parts = location.pathname.split('/');
+    parts.pop();
+    parts.pop();
+    base = location.origin + (parts.join('/') || '');
+  }
+  let path = settings.verifyPath || '/verify/index.html';
+  if (!path.startsWith('/')) path = '/' + path;
+  return `${base}${path}?p=${p}&h=${h}`;
+}
+async function updateQR(){
   const box = document.getElementById('qrBox');
   if (!box || typeof QRCode === 'undefined') return;
-  const payload = JSON.stringify({ t:'Q', n: $('#quoteNumber').textContent.trim(), c: $('#clientName').textContent.trim(), d: $('#issueDate').textContent.trim(), tot: $('#total').textContent.trim(), id: getCurrentQuoteId() || '' });
-  const p = b64url(payload);
-  sha256Hex(p + '.' + getSecret()).then(h => {
-    const settings = JSON.parse(localStorage.getItem('app_settings')||'{}');
-    let base = settings.verifyBase || 'https://recibos.ciaociao.mx';
-    if (!/^https?:\/\//i.test(base)) { const parts = location.pathname.split('/'); parts.pop(); parts.pop(); base = location.origin + (parts.join('/') || ''); }
-    let path = settings.verifyPath || '/verify/index.html';
-    if (!path.startsWith('/')) path = '/' + path;
-    const url = `${base}${path}?p=${p}&h=${h}`;
-    box.innerHTML = '';
-    try { new QRCode(box, { text: url, width: 100, height: 100, correctLevel: QRCode.CorrectLevel.M }); } catch {}
-    box.dataset.url = url;
-  });
+  const url = await buildVerifyUrl();
+  if (!url) return;
+  box.replaceChildren();
+  try { new QRCode(box, { text: url, width: 100, height: 100, correctLevel: QRCode.CorrectLevel.M }); } catch (e) { void e; }
+  box.dataset.url = url;
 }
 
 function b64url(str){ return btoa(unescape(encodeURIComponent(str))).replace(/=+$/,'').replace(/\+/g,'-').replace(/\//g,'_'); }
 async function sha256Hex(text){ const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)); return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join(''); }
-function getSecret(){ try { const s = localStorage.getItem('qr_secret'); if (s) return s; } catch{} return 'CCMX-QR-2025'; }
+function getSecret(){ try { const s = localStorage.getItem('qr_secret'); if (s) return s; } catch (e) { void e; } return 'CCMX-QR-2025'; }
 
 function waitFor(cond, timeout=500){
   const start = Date.now();
