@@ -223,6 +223,21 @@ function buildItemRow(item = {}) {
   return tr;
 }
 
+function resetItemRow(tr) {
+  if (!tr) return;
+  const cells = tr.querySelectorAll('td');
+  if (!cells.length) return;
+  const [desc, qty, price, discount, subtotal, sku] = cells;
+  if (desc) desc.textContent = 'Artículo de joyería';
+  if (qty) qty.textContent = '1';
+  if (price) price.textContent = '0.00';
+  if (discount) discount.textContent = '0';
+  if (subtotal) subtotal.textContent = '0.00';
+  if (sku) sku.textContent = '—';
+  const typeSelect = tr.querySelector('.item-type');
+  if (typeSelect) typeSelect.value = 'producto';
+}
+
 function addRow() {
   const tr = buildItemRow();
   $('#itemsBody').appendChild(tr);
@@ -571,7 +586,8 @@ function bindUI() {
     if (del) {
       const tr = del.closest('tr');
       const tbody = tr?.parentElement;
-      if (tbody && tbody.children.length > 1) {
+      if (!tbody || !tr) return;
+      if (tbody.children.length > 1) {
         // capture index and node
         const idx = Array.prototype.indexOf.call(tbody.children, tr);
         const clone = tr.cloneNode(true);
@@ -586,8 +602,12 @@ function bindUI() {
           },
           type: 'info', duration: 5000
         });
+      } else {
+        resetItemRow(tr);
+        recalc();
+        showNotification('Producto eliminado', 'success');
       }
-      else showNotification('Debe mantener al menos un producto','error');
+      return;
     }
     const actBtn = e.target.closest('[data-action]');
     if (actBtn) {
