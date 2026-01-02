@@ -117,6 +117,35 @@
       body.simple .doc-title h1{ background: none; color: var(--ink); }
       body.simple .items thead th{ background: #fafafa; }
       body.simple .sum-card .row.total{ background:#fafafa; }
+      body.exporting{ background:#ffffff; }
+      body.exporting .sheet{ margin:0 auto; padding:0; box-shadow:none; background:transparent; }
+      body.exporting .gilded-frame{ border-radius:12px; padding:26px; background:#ffffff; border:1px solid #e8e0d0; }
+      body.exporting .header{ padding-bottom:18px; border-bottom:1px solid #ebe4d6; }
+      body.exporting .doc-sub{ color:#7c6f5a; }
+      body.exporting .meta{ border-left:1px solid #e5dccb; }
+      body.exporting .card{ background:#fff; box-shadow:none; }
+      body.exporting .items{ box-shadow:none; }
+      body.exporting .items thead th{ background:linear-gradient(180deg,#fff8eb,#fbf4e6); }
+      body.exporting .items tbody tr:nth-child(even){ background:#fdf9f1; }
+      body.exporting .sum-card{ border-color:#e8e0d0; }
+      body.exporting .sum-card .row.total{ background:linear-gradient(180deg,#fff6e4,#f7ecda); }
+      body.exporting .sum-card .row:last-child{ background:#f1fbf4; }
+      body.exporting .sig{ background:#fff; }
+      body.exporting .transaction-type-select,
+      body.exporting #applyIVA,
+      body.exporting #ivaRate,
+      body.exporting #copyQrLink{ border:none; background:transparent; box-shadow:none; }
+      body.exporting .transaction-type-select{ appearance:none; -webkit-appearance:none; padding:0; color:var(--ink); font-weight:600; }
+      body.exporting .items th:last-child,
+      body.exporting .items td:last-child{ display:none; }
+      body.exporting .items th:nth-last-child(2),
+      body.exporting .items td:nth-last-child(2){ text-align:center; }
+      body.exporting .actions,
+      body.exporting .btn-back,
+      body.exporting .mobile-actions,
+      body.exporting .mobile-summary,
+      body.exporting .delete-row,
+      body.exporting .clear-sig{ display:none !important; }
     </style>
   </head>
   <body>
