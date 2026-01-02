@@ -1,9 +1,11 @@
 import { getSignatures, setSignature, clearSignature as clearSigState } from './state.js';
 
 let signatureCanvas, ctx, isDrawing = false, currentType = null;
+let activePointerId = null;
 
 export function initSignature(canvasEl) {
   signatureCanvas = canvasEl;
+  signatureCanvas.style.touchAction = 'none';
   scaleCanvasForDPR();
   ctx = signatureCanvas.getContext('2d');
   ctx.strokeStyle = '#1f2937';
@@ -11,14 +13,22 @@ export function initSignature(canvasEl) {
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
 
-  signatureCanvas.addEventListener('mousedown', start);
-  signatureCanvas.addEventListener('mousemove', move);
-  signatureCanvas.addEventListener('mouseup', stop);
-  signatureCanvas.addEventListener('mouseout', stop);
+  if (window.PointerEvent) {
+    signatureCanvas.addEventListener('pointerdown', pointerStart);
+    signatureCanvas.addEventListener('pointermove', pointerMove);
+    signatureCanvas.addEventListener('pointerup', pointerStop);
+    signatureCanvas.addEventListener('pointercancel', pointerStop);
+    signatureCanvas.addEventListener('pointerout', pointerStop);
+  } else {
+    signatureCanvas.addEventListener('mousedown', start);
+    signatureCanvas.addEventListener('mousemove', move);
+    signatureCanvas.addEventListener('mouseup', stop);
+    signatureCanvas.addEventListener('mouseout', stop);
 
-  signatureCanvas.addEventListener('touchstart', touch);
-  signatureCanvas.addEventListener('touchmove', touch);
-  signatureCanvas.addEventListener('touchend', stop);
+    signatureCanvas.addEventListener('touchstart', touch, { passive: false });
+    signatureCanvas.addEventListener('touchmove', touch, { passive: false });
+    signatureCanvas.addEventListener('touchend', stop);
+  }
 }
 
 function scaleCanvasForDPR(){
@@ -38,6 +48,7 @@ export function openSignatureModal(type) {
   currentType = type;
   document.getElementById('signatureTitle').textContent = type === 'client' ? 'Firma del Cliente' : 'Firma del Responsable';
   clearModalSignature();
+  scaleCanvasForDPR();
   const modal = document.getElementById('signatureModal');
   modal.classList.add('active');
 
@@ -110,6 +121,31 @@ function stop() { isDrawing = false; }
 function touch(e) {
   e.preventDefault();
   const t = e.touches[0];
+  if (!t) return;
   const ev = new MouseEvent(e.type === 'touchstart' ? 'mousedown' : e.type === 'touchmove' ? 'mousemove' : 'mouseup', { clientX: t.clientX, clientY: t.clientY });
   signatureCanvas.dispatchEvent(ev);
+}
+
+function pointerStart(e) {
+  if (e.button !== undefined && e.button !== 0) return;
+  activePointerId = e.pointerId;
+  signatureCanvas.setPointerCapture(activePointerId);
+  isDrawing = true;
+  const r = signatureCanvas.getBoundingClientRect();
+  ctx.beginPath();
+  ctx.moveTo(e.clientX - r.left, e.clientY - r.top);
+}
+
+function pointerMove(e) {
+  if (!isDrawing || e.pointerId !== activePointerId) return;
+  const r = signatureCanvas.getBoundingClientRect();
+  ctx.lineTo(e.clientX - r.left, e.clientY - r.top);
+  ctx.stroke();
+}
+
+function pointerStop(e) {
+  if (e.pointerId !== activePointerId) return;
+  isDrawing = false;
+  signatureCanvas.releasePointerCapture(activePointerId);
+  activePointerId = null;
 }
