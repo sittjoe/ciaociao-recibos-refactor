@@ -241,7 +241,7 @@ async function generatePDF() {
     endExport = await exportStart();
     await waitFor(()=> document.getElementById('qrBox')?.children.length>0, 600);
     const element = document.querySelector('.gilded-frame');
-    const canvas = await html2canvas(element, { scale: 2, logging: false, useCORS: true, backgroundColor: '#ffffff', windowWidth: 900, windowHeight: element.scrollHeight });
+    const canvas = await html2canvas(element, { scale: 3, logging: false, useCORS: true, backgroundColor: '#ffffff', windowWidth: 900, windowHeight: element.scrollHeight });
     const { jsPDF } = window.jspdf; const fmt = (JSON.parse(localStorage.getItem('app_settings')||'{}').pdfFormat)||'letter';
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: fmt });
     const imgData = canvas.toDataURL('image/png');

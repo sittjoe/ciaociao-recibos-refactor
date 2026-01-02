@@ -384,7 +384,7 @@ async function generatePDF() {
     await waitFor(() => document.getElementById('qrBox')?.children.length > 0, 600);
     $$('.delete-row, .clear-sig, .actions, .watermark, .btn-back').forEach(el => { if (el) el.style.display = 'none'; });
     const element = document.querySelector('.gilded-frame');
-    const canvas = await html2canvas(element, { scale: 2, logging: false, useCORS: true, backgroundColor: '#ffffff', windowWidth: 900, windowHeight: element.scrollHeight });
+    const canvas = await html2canvas(element, { scale: 3, logging: false, useCORS: true, backgroundColor: '#ffffff', windowWidth: 900, windowHeight: element.scrollHeight });
     $$('.delete-row, .clear-sig, .actions, .btn-back').forEach(el => { if (el) el.style.display = ''; });
     const wm = document.querySelector('.watermark'); if (wm) wm.style.display = 'flex';
     const { jsPDF } = window.jspdf; const fmt = (JSON.parse(localStorage.getItem('app_settings')||'{}').pdfFormat)||'letter';
